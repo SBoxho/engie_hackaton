@@ -66,6 +66,8 @@ Weather features are population-weighted Open-Meteo fields joined at the origin 
 
 Training uses scikit-learn `HistGradientBoostingRegressor`, one deterministic direct model per eligible horizon: 1h, 3h, 6h, and 24h. The trainer stores the feature schema used by each horizon because short histories can make long-lag features all-missing or constant. Such non-informative columns are excluded for that horizon instead of being silently imputed.
 
+The trainer also fits lower and upper quantile regressors for each eligible horizon using `loss="quantile"` at the 0.10 and 0.90 quantiles. The evaluation artifact stores these as an 80% central prediction interval for each forecast row. If an older model artifact does not contain quantile models, evaluation falls back to an empirical residual interval so uncertainty is still shown rather than omitted silently.
+
 Default training parameters are CPU-friendly:
 
 - `learning_rate=0.05`
@@ -86,14 +88,30 @@ Evaluation is chronological. For each horizon:
 
 Metrics are MAE, RMSE, sMAPE, sample count, coverage, and improvement versus the strongest eligible baseline by MAE. Baselines with zero usable samples, such as previous-week on histories shorter than seven days, are reported but not treated as eligible. Hour and season metrics are emitted only when a segment has enough samples.
 
+Each horizon also gets a trust summary: model MAE, strongest-baseline MAE, improvement percentage, test coverage, interval coverage, interval width, and a reliability badge. A positive improvement gets `Model edge detected`; horizons that do not beat the strongest eligible baseline get `Experimental horizon`. Weak horizons remain in the dashboard and artifact.
+
+## Explainability
+
+Evaluation also emits a first local XAI layer for each prediction. The method is a lightweight grouped ablation: for one forecast row, each feature family is replaced with deterministic reference values from the training period, and the model prediction is compared with the original prediction.
+
+Feature families are reported in user-facing language:
+
+- Weather: temperature, humidity, cloud cover, radiation, and wind.
+- Calendar: hour, weekday, weekend, holiday, season, DST, and horizon timing.
+- Recent demand: current demand, 1h/3h/6h lags, and rolling demand statistics.
+- Weekly pattern: the 168h lag.
+- Data quality/provenance: weather coverage, missing indicators, city coverage, and source age.
+
+Each prediction record contains 2-4 readable explanation cards plus a compact technical contribution list for the dashboard expander. These explanations are approximate, model-derived sensitivity checks. They describe associations learned by the model and must not be read as causal explanations.
+
 ## Artifacts
 
 Generated artifact layout:
 
 - `features.parquet`: supervised feature rows with origin/target timestamps, horizon, target, continuity flags, and model features.
 - `feature_metadata.json`: schema version, feature columns, target column, source, coverage audit, weather audit, leakage controls, and source digest.
-- `demand_hgb_model.pkl`: pickled model bundle containing schema version, model kind, feature metadata, train config, per-horizon feature schemas, per-horizon models, split periods, validation metrics, and skipped horizon reasons.
-- `evaluation.json`: model metrics, baseline metrics, improvement rows, segment metrics, prediction-level records, data audit, training periods, generation timestamp, and the experimental forecast disclaimer.
+- `demand_hgb_model.pkl`: pickled model bundle containing schema version, model kind, feature metadata, train config, per-horizon feature schemas, per-horizon point and quantile models, split periods, validation metrics, interval definition, and skipped horizon reasons.
+- `evaluation.json`: model metrics, baseline metrics, improvement rows with trust badges, segment metrics, prediction-level records with point forecasts, lower/upper interval bounds, local explanation cards, data audit, training periods, generation timestamp, and the experimental forecast and explanation disclaimers.
 
 Artifact validation rejects unsupported schema versions, missing feature columns, missing per-horizon models, missing per-horizon feature schemas, target/horizon misalignment, and future weather provenance.
 

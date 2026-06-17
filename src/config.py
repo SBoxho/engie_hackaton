@@ -16,6 +16,29 @@ class Settings:
     odre_base_url: str = os.getenv(
         "ODRE_BASE_URL", "https://odre.opendatasoft.com/api/explore/v2.1"
     )
+    ecowatt_current_dataset_id: str = os.getenv(
+        "ECOWATT_CURRENT_DATASET_ID", "nouveau_signal_ecowatt"
+    )
+    ecowatt_legacy_dataset_id: str = os.getenv(
+        "ECOWATT_LEGACY_DATASET_ID", "signal-ecowatt"
+    )
+    ecowatt_current_odre_url: str = os.getenv(
+        "ECOWATT_CURRENT_ODRE_URL",
+        "https://odre.opendatasoft.com/explore/dataset/nouveau_signal_ecowatt/",
+    )
+    ecowatt_legacy_odre_url: str = os.getenv(
+        "ECOWATT_LEGACY_ODRE_URL",
+        "https://odre.opendatasoft.com/explore/dataset/signal-ecowatt/",
+    )
+    ecowatt_current_data_gouv_url: str = os.getenv(
+        "ECOWATT_CURRENT_DATA_GOUV_URL",
+        "https://www.data.gouv.fr/datasets/donnees-du-signal-ecowatt-a-partir-du-01-09-2022",
+    )
+    rte_ecowatt_api_url: str = os.getenv(
+        "RTE_ECOWATT_API_URL",
+        "https://digital.iservices.rte-france.com/open_api/ecowatt/v5/signals",
+    )
+    rte_ecowatt_api_token: str | None = os.getenv("RTE_ECOWATT_API_TOKEN") or None
     open_meteo_base_url: str = os.getenv(
         "OPEN_METEO_BASE_URL", "https://api.open-meteo.com/v1/forecast"
     )
@@ -34,6 +57,10 @@ class Settings:
     @property
     def energy_store_dir(self) -> Path:
         return self.processed_dir / "eco2mix"
+
+    @property
+    def ecowatt_cache_dir(self) -> Path:
+        return self.raw_dir / "ecowatt"
 
     @property
     def weather_features_path(self) -> Path:

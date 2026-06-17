@@ -4,7 +4,8 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .pytest_tmp/
-.streamlit/
+.streamlit/*
+!.streamlit/config.toml
 data/raw/*
 data/interim/*
 data/processed/*

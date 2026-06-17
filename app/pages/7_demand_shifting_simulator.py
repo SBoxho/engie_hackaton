@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import streamlit as st
 
+from app.components.cards import message_box, section_header
 from app.components.layout import apply_theme
 
 st.set_page_config(page_title="Demand-shifting simulator", page_icon=":material/tune:", layout="wide")
 apply_theme()
 
-st.markdown('<div class="eyebrow">Action simulator</div>', unsafe_allow_html=True)
-st.markdown('<div class="section-title">Demand-shifting simulator</div>', unsafe_allow_html=True)
-st.markdown(
-    '<div class="section-copy">A placeholder for the hackathon demo: show how moving flexible electricity use away from high-pressure hours could reduce strain.</div>',
-    unsafe_allow_html=True,
+section_header(
+    "Action simulator",
+    "Demand-shifting simulator",
+    "Move flexible electricity use away from high-pressure hours and compare the result.",
 )
 
 left, right = st.columns([1, 1])
@@ -28,9 +28,10 @@ with right:
     energy_kwh = power_kw * duration
     st.metric("Flexible energy", f"{energy_kwh:.1f} kWh")
 
-st.info(
-    "This page is intentionally a placeholder. The next step is to connect it to the 24h pressure timeline "
-    "and estimate carbon and demand-pressure deltas from the same official data pipeline."
+message_box(
+    "Next step",
+    "Connect this simulator to the 24h pressure timeline and estimate carbon and demand-pressure changes from the same official data pipeline.",
+    kind="info",
 )
 
 st.link_button("Back to Energy Pulse France", "/")

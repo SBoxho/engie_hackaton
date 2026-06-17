@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from app.components.charts import consumption_chart, production_area_chart
+from app.components.layout import apply_theme
 from src.config import settings
 from src.data_processing.features import add_time_features
 from src.data_processing.storage import PartitionedParquetStore
@@ -14,6 +15,8 @@ from src.data_sources.rte_eco2mix_historical import (
     fetch_historical,
     load_cached_historical,
 )
+
+apply_theme()
 
 st.title("Historical national grid")
 st.caption("Consolidated RTE éCO2mix data via the official ODRÉ open-data API")

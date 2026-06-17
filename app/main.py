@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import html
 import json
 import sys
 from datetime import datetime, timedelta, timezone
@@ -16,7 +15,21 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.components.charts import consumption_chart, mix_donut, production_area_chart
+from app.components.cards import (
+    driver_card,
+    explanation_card,
+    horizon_forecast_card,
+    message_box,
+    metric_card,
+    section_header,
+    status_badge,
+)
 from app.components.data_quality import render_data_quality
+from app.components.energy_weather import (
+    build_energy_weather_timeline,
+    energy_weather_heatmap,
+    summarize_energy_weather,
+)
 from app.components.layout import apply_theme
 from app.components.mood_explanation import render_mood_explanation
 from app.components.weather_context import render_weather_context
@@ -25,6 +38,7 @@ from src.data_processing.clean_energy_mix import clean_energy_mix
 from src.data_processing.features import add_time_features
 from src.data_processing.storage import PartitionedParquetStore
 from src.data_processing.weather_features import join_energy_weather
+from src.data_sources.ecowatt import load_ecowatt_window, source_attribution, status_at
 from src.data_sources.rte_eco2mix import Eco2MixError, fetch_eco2mix, load_cached_eco2mix
 from src.models.mood_calibration import FIXED_THRESHOLDS, classify_mood
 
@@ -59,6 +73,11 @@ def load_weather(start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=900, show_spinner=False)
+def load_ecowatt(start: pd.Timestamp, end: pd.Timestamp) -> tuple[pd.DataFrame, str]:
+    return load_ecowatt_window(start, end, timezone_name=settings.timezone)
+
+
+@st.cache_data(ttl=900, show_spinner=False)
 def load_model_evaluation() -> dict[str, Any]:
     path = settings.processed_dir / "demand_model" / "evaluation.json"
     if not path.exists():
@@ -78,41 +97,6 @@ def mood_artifact() -> tuple[dict[str, Any], str]:
         "source": {"name": "Explicit fixed-threshold fallback"},
         "generated_at": None,
     }, "fixed fallback"
-
-
-def card(icon: str, label: str, value: str, detail: str) -> None:
-    st.markdown(
-        f"""
-        <div class="pulse-card">
-          <div class="pulse-icon">{icon}</div>
-          <div class="pulse-label">{html.escape(label)}</div>
-          <div class="pulse-value">{html.escape(value)}</div>
-          <div class="pulse-detail">{html.escape(detail)}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def driver_card(icon: str, title: str, detail: str) -> None:
-    st.markdown(
-        f"""
-        <div class="driver-card">
-          <div class="driver-icon">{icon}</div>
-          <div class="driver-label">Driver</div>
-          <div class="driver-title">{html.escape(title)}</div>
-          <div class="driver-detail">{html.escape(detail)}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def section(kicker: str, title: str, copy: str | None = None) -> None:
-    st.markdown(f'<div class="section-kicker">{html.escape(kicker)}</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="section-title">{html.escape(title)}</div>', unsafe_allow_html=True)
-    if copy:
-        st.markdown(f'<div class="section-copy">{html.escape(copy)}</div>', unsafe_allow_html=True)
 
 
 def format_mw(value: float) -> str:
@@ -141,17 +125,55 @@ def weather_summary(weather: pd.DataFrame) -> tuple[str, str, dict[str, float] |
     return headline, detail, {"temp": temp, "wind": wind, "cloud": cloud}
 
 
+def compact_mood_reason(reason: str) -> str:
+    if "CO" in reason and "fossil" in reason:
+        return "CO2 or fossil output is above its calibrated upper range."
+    if "Consumption" in reason:
+        return "Demand is above its calibrated high-demand range."
+    if "Renewable" in reason:
+        return "Renewables are high and CO2 intensity is low."
+    return reason
+
+
+def confidence_parts(text: str) -> tuple[str, str, str]:
+    if ":" in text:
+        label, detail = text.split(":", 1)
+        label = label.strip()
+        detail = detail.strip()
+    else:
+        label, detail = "Unknown", text
+    status = "Watch" if label.lower().startswith(("low", "unknown")) else "Comfortable"
+    return label, detail, status
+
+
+def ecowatt_card_parts(signal: dict[str, Any], source_status: str) -> tuple[str, str, str]:
+    status = str(signal.get("ecowatt_status", "unknown"))
+    label = str(signal.get("ecowatt_label", "Unknown"))
+    source = str(signal.get("ecowatt_source", source_status))
+    if status == "green":
+        detail = "EcoWatt is the official electricity weather signal. Current signal is normal."
+    elif status == "orange":
+        detail = "EcoWatt is the official electricity weather signal. The grid is tense."
+    elif status == "red":
+        detail = "EcoWatt is the official electricity weather signal. The grid is very tense."
+    else:
+        detail = "EcoWatt is the official electricity weather signal. No current signal is available."
+    if source and source != "Unavailable":
+        detail = f"{detail} Source: {source}."
+    return label, detail, status
+
+
 def demand_pressure(value: float, quantiles: pd.Series) -> tuple[str, str, float]:
     q25 = float(quantiles.loc[0.25])
     q60 = float(quantiles.loc[0.60])
     q85 = float(quantiles.loc[0.85])
     if value >= q85:
-        return "High", "#fb7185", 1.0
+        return "High", "#ef4444", 1.0
     if value >= q60:
-        return "Elevated", "#fbbf24", 0.72
+        return "Elevated", "#f59e0b", 0.72
     if value <= q25:
-        return "Light", "#38bdf8", 0.28
-    return "Normal", "#5eead4", 0.5
+        return "Light", "#0284c7", 0.28
+    return "Normal", "#10b981", 0.5
 
 
 def build_pressure_forecast(data: pd.DataFrame, latest_ts: pd.Timestamp) -> tuple[pd.DataFrame, str]:
@@ -202,18 +224,54 @@ def pressure_timeline(forecast: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def render_model_honesty(payload: dict[str, Any]) -> None:
+def render_forecast_cards(forecast: pd.DataFrame) -> None:
+    local = forecast.copy()
+    local["local_time"] = local["target"].dt.tz_convert(settings.timezone)
+    local["hour_label"] = local["local_time"].dt.strftime("%H:%M")
+    first = local.iloc[0]
+    first_six = local.head(6)
+    peak = local.loc[local["height"].idxmax()]
+    easy = local.loc[local["height"].idxmin()]
+
+    cols = st.columns(4)
+    with cols[0]:
+        horizon_forecast_card(
+            "Next hour",
+            str(first["pressure"]),
+            f"{first['hour_label']} local time, based on nearby recent demand.",
+            status=str(first["pressure"]),
+        )
+    with cols[1]:
+        six_peak = first_six.loc[first_six["height"].idxmax()]
+        horizon_forecast_card(
+            "Next 6 hours",
+            str(six_peak["pressure"]),
+            f"Highest pressure in this window appears around {six_peak['hour_label']}.",
+            status=str(six_peak["pressure"]),
+        )
+    with cols[2]:
+        horizon_forecast_card(
+            "Peak watch",
+            str(peak["pressure"]),
+            f"The strongest pressure signal appears around {peak['hour_label']}.",
+            status=str(peak["pressure"]),
+        )
+    with cols[3]:
+        horizon_forecast_card(
+            "Softer window",
+            str(easy["pressure"]),
+            f"The lightest pressure signal appears around {easy['hour_label']}.",
+            status=str(easy["pressure"]),
+        )
+
+
+def render_forecast_check(payload: dict[str, Any]) -> None:
     comparisons = pd.DataFrame(payload.get("baseline_comparison", []))
     if comparisons.empty:
-        st.markdown(
-            """
-            <div class="honesty-card">
-              <div class="pulse-label">Model honesty</div>
-              <div class="pulse-value">No evaluation yet</div>
-              <div class="honesty-detail">Run the demand-model evaluation to show which horizons beat simple baselines.</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+        message_box(
+            "Forecast check unavailable",
+            "Run the forecast evaluation to compare the app outlook with simple reference rules.",
+            kind="info",
         )
         return
 
@@ -222,16 +280,17 @@ def render_model_honesty(payload: dict[str, Any]) -> None:
     misses = comparisons.loc[comparisons["improvement_vs_strongest_baseline_percent"] <= 0]
     win_text = ", ".join(f"{int(row.horizon_hours)}h" for row in wins.itertuples()) or "none yet"
     miss_text = ", ".join(f"{int(row.horizon_hours)}h" for row in misses.itertuples()) or "none"
-    generated = payload.get("generated_at", "unknown")
-    st.markdown(
-        f"""
-        <div class="honesty-card">
-          <div class="pulse-label">Model honesty</div>
-          <div class="pulse-value">Beats baseline at: <span class="honesty-good">{html.escape(win_text)}</span></div>
-          <div class="honesty-detail">Still weaker or tied at: <span class="honesty-watch">{html.escape(miss_text)}</span>. Artifact generated: {html.escape(str(generated))}.</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    if not wins.empty and misses.empty:
+        status = "Good"
+    elif not wins.empty:
+        status = "Watch"
+    else:
+        status = "Needs work"
+    explanation_card(
+        "Forecast check",
+        f"Stronger than simple reference rules at: {win_text}. Needs more work at: {miss_text}.",
+        label="Reliability",
+        status=status,
     )
 
 
@@ -250,38 +309,122 @@ mood = classify_mood(latest.to_dict(), artifact)
 local_time = latest["timestamp"].tz_convert(settings.timezone)
 weather = load_weather(data["timestamp"].min(), data["timestamp"].max())
 weather_headline, weather_detail, weather_values = weather_summary(weather)
-forecast, forecast_source = build_pressure_forecast(data, latest["timestamp"])
+model_payload = load_model_evaluation()
+ecowatt_start = latest["timestamp"].floor("h") - pd.Timedelta(hours=1)
+ecowatt_end = latest["timestamp"].floor("h") + pd.Timedelta(hours=25)
+ecowatt, ecowatt_source_status = load_ecowatt(ecowatt_start, ecowatt_end)
+current_ecowatt = status_at(ecowatt, latest["timestamp"])
+ecowatt_label, ecowatt_detail, ecowatt_status = ecowatt_card_parts(
+    current_ecowatt, ecowatt_source_status
+)
+energy_weather = build_energy_weather_timeline(
+    data,
+    latest_ts=latest["timestamp"],
+    model_payload=model_payload,
+    mood_artifact=artifact,
+    ecowatt=ecowatt,
+    timezone=settings.timezone,
+)
+energy_summary = summarize_energy_weather(energy_weather.timeline, energy_weather.metadata)
+confidence_label, confidence_detail, confidence_status = confidence_parts(energy_summary["confidence"])
+shift_status = "Unknown" if energy_summary["shift"].startswith("None visible") else "Low-carbon opportunity"
+avoid_status = "Comfortable" if energy_summary["avoid"].startswith("None visible") else "Tense"
 
-st.markdown('<div class="eyebrow">France electricity weather</div>', unsafe_allow_html=True)
-st.markdown('<div class="hero">Energy Pulse France</div>', unsafe_allow_html=True)
+st.markdown('<div class="ep-eyebrow">France electricity weather</div>', unsafe_allow_html=True)
+st.markdown('<div class="ep-hero">Energy Pulse France</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="subtitle">A public energy-weather app that turns official French grid data into a fast read on demand, carbon, weather pressure, and what comes next.</div>',
+    '<div class="ep-subtitle">A fast read on French electricity demand, carbon intensity, weather pressure, and the hours ahead.</div>',
     unsafe_allow_html=True,
 )
-st.markdown(f'<span class="status">{html.escape(source_status)}</span>', unsafe_allow_html=True)
+status_badge(source_status, "blue")
+status_badge(ecowatt_source_status, "blue" if not ecowatt.empty else "grey")
 
-section("Live signal", "Current grid pulse")
-cols = st.columns(5)
+section_header("Live signal", "Current grid pulse")
+cols = st.columns(6)
 with cols[0]:
-    card("&#9889;", "Demand", format_mw(float(latest["consumption_mw"])), "How much power France is using now.")
+    metric_card("Demand", format_mw(float(latest["consumption_mw"])), "How much power France is using now.", icon="kW")
 with cols[1]:
-    card("CO2", "CO2 intensity", f"{float(latest['co2_intensity_g_per_kwh']):,.0f} g/kWh", "Carbon signal from the official source.")
+    metric_card(
+        "CO2 intensity",
+        f"{float(latest['co2_intensity_g_per_kwh']):,.0f} g/kWh",
+        "Carbon signal from the official source.",
+        icon="CO2",
+    )
 with cols[2]:
-    card("&#9679;", "Grid mood", str(mood["mood"]), str(mood["reason"]))
+    metric_card(
+        "Grid mood",
+        str(mood["mood"]),
+        compact_mood_reason(str(mood["reason"])),
+        icon="Pulse",
+        status=str(mood["mood"]),
+    )
 with cols[3]:
-    card("&#9729;", "Weather influence", weather_headline, weather_detail)
+    metric_card("EcoWatt", ecowatt_label, ecowatt_detail, icon="EW", status=ecowatt_status)
 with cols[4]:
-    card("&#8635;", "Last update", f"{local_time:%H:%M}", f"{local_time:%d %b %Y}, Europe/Paris.")
+    metric_card("Weather influence", weather_headline, weather_detail, icon="Met")
+with cols[5]:
+    metric_card("Last update", f"{local_time:%H:%M}", f"{local_time:%d %b %Y}, Europe/Paris.", icon="Now")
 
-section(
+section_header(
     "Next 24h",
-    "Demand pressure forecast",
-    "A simple visual outlook for when the grid may feel light, normal, elevated, or high pressure.",
+    "24h Energy Weather",
+    "A public-friendly outlook for normal use, flexible shifting, and careful hours.",
 )
-st.plotly_chart(pressure_timeline(forecast), width="stretch")
-st.caption(f"{forecast_source} This is a demo outlook, not an RTE operational forecast.")
+summary_cols = st.columns(3)
+with summary_cols[0]:
+    horizon_forecast_card(
+        "Best hours to shift usage",
+        energy_summary["shift"],
+        "Prefer these for flexible appliances when practical.",
+        status=shift_status,
+    )
+with summary_cols[1]:
+    horizon_forecast_card(
+        "Hours to avoid",
+        energy_summary["avoid"],
+        "These show the strongest watch or tense signal.",
+        status=avoid_status,
+    )
+with summary_cols[2]:
+    horizon_forecast_card(
+        "Model confidence / uncertainty",
+        confidence_label,
+        confidence_detail,
+        status=confidence_status,
+    )
+st.plotly_chart(energy_weather_heatmap(energy_weather.timeline), width="stretch")
+message_box(
+    "How to read this",
+    "Comfortable means normal use; Low-carbon opportunity is a better shift window; "
+    "Watch and Tense mean it is worth avoiding flexible demand where practical. "
+    "The EcoWatt row is the official electricity weather signal when public data is available. "
+    "This is a demo outlook, not an RTE operational forecast.",
+    kind="info",
+)
+with st.expander("Advanced values behind the 24h Energy Weather", expanded=False):
+    advanced_columns = [
+        "target",
+        "status",
+        "ecowatt_status",
+        "ecowatt_label",
+        "ecowatt_source",
+        "demand_signal_mw",
+        "demand_source",
+        "model_predicted_mw",
+        "rte_forecast_mw",
+        "reference_consumption_mw",
+        "co2_intensity_g_per_kwh",
+        "co2_source",
+        "threshold_source",
+        "demand_high_threshold_mw",
+        "co2_low_threshold",
+        "co2_high_threshold",
+    ]
+    available_columns = [column for column in advanced_columns if column in energy_weather.timeline]
+    st.dataframe(energy_weather.timeline[available_columns], width="stretch", hide_index=True)
+    st.json(energy_weather.metadata)
 
-section("Why", "What is moving the pulse?")
+section_header("Why", "What is moving the pulse?")
 history_quantiles = data["consumption_mw"].quantile([0.25, 0.60, 0.85])
 current_pressure, _, _ = demand_pressure(float(latest["consumption_mw"]), history_quantiles)
 renewable_share = float(latest.get("renewable_share", 0))
@@ -289,15 +432,15 @@ co2_intensity = float(latest.get("co2_intensity_g_per_kwh", 0))
 driver_cols = st.columns(4)
 with driver_cols[0]:
     driver_card(
-        "&#128200;",
+        "Use",
         f"Demand is {current_pressure.lower()}",
         f"Current use is {format_mw(float(latest['consumption_mw']))}, compared with the recent range.",
     )
 with driver_cols[1]:
-    driver_card("&#127777;", weather_headline, weather_detail)
+    driver_card("Met", weather_headline, weather_detail)
 with driver_cols[2]:
     driver_card(
-        "&#9728;",
+        "Mix",
         "Clean supply is visible",
         f"Renewables are contributing {renewable_share:.1%} of measured domestic generation.",
     )
@@ -308,20 +451,17 @@ with driver_cols[3]:
         f"The latest source intensity is {co2_intensity:,.0f} g/kWh, shown separately from demand.",
     )
 
-section("Action", "What can I do?")
-st.markdown(
-    """
-    <div class="action-panel">
-      <div class="action-title">Try shifting flexible demand away from high-pressure hours.</div>
-      <div class="pulse-detail">The simulator placeholder is ready for the hackathon story: choose an appliance, move it on the timeline, and show how the idea would reduce pressure once the model is connected.</div>
-    </div>
-    """,
-    unsafe_allow_html=True,
+section_header("Action", "What can I do?")
+explanation_card(
+    "Try shifting flexible demand away from high-pressure hours.",
+    "Choose an appliance, move it on the timeline, and compare the pressure signal once the simulator is connected.",
+    label="Demand shifting",
+    icon="Tune",
 )
 st.page_link("pages/7_demand_shifting_simulator.py", label="Open demand-shifting simulator", icon=":material/tune:")
 
-section("Honesty", "Model honesty")
-render_model_honesty(load_model_evaluation())
+section_header("Trust", "Forecast check")
+render_forecast_check(model_payload)
 
 with st.expander("Advanced / Data Science", expanded=False):
     st.write("Deep-dive pages for the technical jury and for continuing development.")
@@ -363,3 +503,11 @@ with st.expander("Advanced / Data Science", expanded=False):
     st.caption(f"Mood thresholds: {calibration_status}.")
     with st.expander("Data quality and freshness", expanded=False):
         render_data_quality(data)
+
+sources = source_attribution()
+st.caption(
+    "Data sources: RTE eco2mix via ODRE; EcoWatt public history via "
+    f"[ODRE]({sources['current_history']}) / [data.gouv.fr]({sources['data_gouv']}); "
+    f"legacy EcoWatt via [ODRE]({sources['legacy_history']}); optional live EcoWatt via "
+    f"[RTE API]({sources['rte_live_api']})."
+)

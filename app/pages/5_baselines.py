@@ -8,6 +8,8 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+from app.components.layout import apply_theme
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ARTIFACT = PROJECT_ROOT / "data" / "processed" / "baseline_backtest.json"
@@ -22,6 +24,8 @@ LABELS = {
 def load_artifact(path: str) -> dict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
+
+apply_theme()
 
 st.title("Demand baselines")
 st.caption(

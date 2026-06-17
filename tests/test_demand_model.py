@@ -15,6 +15,8 @@ from src.models.demand_model import (
     build_feature_frame,
     chronological_split,
     evaluate_models,
+    explain_forecast_rows,
+    feature_family_columns,
     inspect_demand_dataset,
     load_model_bundle,
     regression_metrics,
@@ -216,7 +218,21 @@ def test_deterministic_training_and_evaluation_baseline_comparison():
     for row in first_eval["baseline_comparison"]:
         assert row["strongest_baseline"] in {"persistence", "day_naive", "week_naive"}
         assert row["baseline_eligible_count"] >= 2
+        assert row["reliability_badge"] in {"Model edge detected", "Experimental horizon"}
+        assert row["model_beats_strongest_baseline"] == (
+            row["improvement_vs_strongest_baseline_percent"] > 0
+        )
+        assert row["prediction_interval_method"] == "hist_gradient_boosting_quantile"
     assert first_eval["segment_metrics"]
+    assert first_eval["explanation_disclaimer"]
+    assert first_eval["interval_definition"]["coverage_label"] == "80% central prediction interval"
+    first_explanation = first_predictions.iloc[0]
+    assert first_explanation["explanation_status"] == "ok"
+    assert first_explanation["model_interval_lower_mw"] <= first_explanation["model_predicted_mw"]
+    assert first_explanation["model_interval_upper_mw"] >= first_explanation["model_predicted_mw"]
+    assert 2 <= len(first_explanation["explanation_cards"]) <= 4
+    assert first_explanation["technical_contributions"]
+    assert all("weather_" not in card["title"] for card in first_explanation["explanation_cards"])
 
 
 def test_metric_calculation_and_artifact_schema_validation(tmp_path):
@@ -241,6 +257,35 @@ def test_metric_calculation_and_artifact_schema_validation(tmp_path):
     save_model_bundle(bundle, path)
     loaded = load_model_bundle(path)
     assert loaded["schema_version"] == bundle["schema_version"]
+
+
+def test_explanation_family_mapping_and_fallback_are_readable():
+    columns = [
+        "weather_temperature_c",
+        "origin_hour",
+        "target_is_weekend",
+        "demand_lag_1h_mw",
+        "demand_roll_1h_mean_mw",
+        "demand_lag_168h_mw",
+        "weather_population_coverage",
+        "weather_temperature_c_missing",
+    ]
+    families = feature_family_columns(columns)
+
+    assert families["weather"] == ["weather_temperature_c"]
+    assert "target_is_weekend" in families["calendar"]
+    assert "demand_lag_1h_mw" in families["recent_demand"]
+    assert families["weekly_pattern"] == ["demand_lag_168h_mw"]
+    assert "weather_temperature_c_missing" in families["data_quality"]
+
+    fallback = explain_forecast_rows(
+        pd.DataFrame({"origin_hour": [12]}),
+        model=object(),
+        feature_columns=["missing_column"],
+        reference_rows=pd.DataFrame(),
+    )
+    assert fallback.iloc[0]["explanation_status"] == "fallback"
+    assert fallback.iloc[0]["explanation_cards"][0]["title"] == "Explanation could not be computed"
 
 
 def test_cli_smoke_build_train_evaluate(tmp_path):

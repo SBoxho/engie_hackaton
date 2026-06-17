@@ -22,6 +22,10 @@ EVALUATION_SCHEMA_VERSION = 1
 DEFAULT_TIMEZONE = "Europe/Paris"
 DEFAULT_RANDOM_SEED = 42
 TARGET_COLUMN = "target_mw"
+EXPLANATION_DISCLAIMER = (
+    "Explanations are approximate, model-derived sensitivity checks. "
+    "They describe associations in the fitted model, not causal effects."
+)
 WEATHER_COLUMNS = (
     "weather_temperature_c",
     "weather_wind_speed_kmh",
@@ -37,6 +41,35 @@ WEATHER_META_COLUMNS = (
 )
 REQUIRED_ENERGY_COLUMNS = {"timestamp", "consumption_mw"}
 MODEL_KIND = "sklearn.HistGradientBoostingRegressor"
+INTERVAL_QUANTILES = (0.10, 0.90)
+EXPLANATION_FAMILY_ORDER = (
+    "weather",
+    "calendar",
+    "recent_demand",
+    "weekly_pattern",
+    "data_quality",
+)
+EXPLANATION_FAMILY_LABELS = {
+    "weather": "Weather",
+    "calendar": "Calendar",
+    "recent_demand": "Recent demand",
+    "weekly_pattern": "Weekly pattern",
+    "data_quality": "Data quality/provenance",
+}
+EXPLANATION_FAMILY_ICONS = {
+    "weather": "W",
+    "calendar": "C",
+    "recent_demand": "D",
+    "weekly_pattern": "7d",
+    "data_quality": "Q",
+}
+FEATURE_LABELS = {
+    "weather_temperature_c": "Temperature",
+    "weather_wind_speed_kmh": "Wind",
+    "weather_cloud_cover_pct": "Cloud cover",
+    "weather_solar_radiation_wm2": "Solar radiation",
+    "weather_humidity_pct": "Humidity",
+}
 
 
 @dataclass(frozen=True)
@@ -618,6 +651,7 @@ def train_models(
 
     feature_columns = list(metadata["feature_columns"])
     models: dict[int, Any] = {}
+    interval_models: dict[int, dict[str, Any]] = {}
     feature_columns_by_horizon: dict[str, list[str]] = {}
     horizon_metadata: dict[str, Any] = {}
     validation_rows: list[dict[str, Any]] = []
@@ -664,7 +698,30 @@ def train_models(
             random_state=config.random_seed,
         )
         model.fit(train_rows[horizon_feature_columns], train_rows[TARGET_COLUMN])
+        lower_model = HistGradientBoostingRegressor(
+            loss="quantile",
+            quantile=INTERVAL_QUANTILES[0],
+            learning_rate=0.05,
+            max_iter=80,
+            max_leaf_nodes=31,
+            l2_regularization=0.05,
+            early_stopping=False,
+            random_state=config.random_seed,
+        )
+        lower_model.fit(train_rows[horizon_feature_columns], train_rows[TARGET_COLUMN])
+        upper_model = HistGradientBoostingRegressor(
+            loss="quantile",
+            quantile=INTERVAL_QUANTILES[1],
+            learning_rate=0.05,
+            max_iter=80,
+            max_leaf_nodes=31,
+            l2_regularization=0.05,
+            early_stopping=False,
+            random_state=config.random_seed,
+        )
+        upper_model.fit(train_rows[horizon_feature_columns], train_rows[TARGET_COLUMN])
         models[horizon] = model
+        interval_models[horizon] = {"lower": lower_model, "upper": upper_model}
         feature_columns_by_horizon[str(horizon)] = horizon_feature_columns
         horizon_metadata[str(horizon)] = {
             "train_start_utc": utc_iso(train_rows["target_timestamp"].min()),
@@ -685,6 +742,13 @@ def train_models(
         "feature_columns": feature_columns,
         "feature_columns_by_horizon": feature_columns_by_horizon,
         "models": models,
+        "interval_models": interval_models,
+        "interval_definition": {
+            "method": "hist_gradient_boosting_quantile",
+            "lower_quantile": INTERVAL_QUANTILES[0],
+            "upper_quantile": INTERVAL_QUANTILES[1],
+            "coverage_label": "80% central prediction interval",
+        },
         "horizons": sorted(models),
         "horizon_metadata": horizon_metadata,
         "validation_metrics": validation_rows,
@@ -727,6 +791,368 @@ def _informative_feature_columns(rows: pd.DataFrame, feature_columns: list[str])
     return informative
 
 
+def feature_family_columns(feature_columns: Iterable[str]) -> dict[str, list[str]]:
+    """Group raw model columns into explanation families."""
+    families = {family: [] for family in EXPLANATION_FAMILY_ORDER}
+    for column in feature_columns:
+        if column == "demand_lag_168h_mw":
+            families["weekly_pattern"].append(column)
+        elif column.endswith("_missing") or column in {
+            "weather_population_coverage",
+            "weather_missing_count",
+            "weather_missing_city_count",
+            "weather_source_age_minutes",
+        }:
+            families["data_quality"].append(column)
+        elif column in WEATHER_COLUMNS:
+            families["weather"].append(column)
+        elif column == "origin_demand_mw" or column.startswith("demand_lag_") or column.startswith("demand_roll_"):
+            families["recent_demand"].append(column)
+        elif column == "horizon_hours" or column.startswith("origin_") or column.startswith("target_"):
+            families["calendar"].append(column)
+    return {family: columns for family, columns in families.items() if columns}
+
+
+def explain_forecast_rows(
+    rows: pd.DataFrame,
+    *,
+    model: Any,
+    feature_columns: list[str],
+    reference_rows: pd.DataFrame,
+    predicted: Iterable[float] | None = None,
+) -> pd.DataFrame:
+    """Return deterministic local explanations for already prepared forecast rows."""
+    if rows.empty:
+        return pd.DataFrame()
+    missing_columns = set(feature_columns).difference(rows.columns)
+    if missing_columns:
+        return _fallback_explanations(rows, f"Missing model feature columns: {sorted(missing_columns)}")
+    try:
+        families = feature_family_columns(feature_columns)
+        if len(families) < 2:
+            return _fallback_explanations(rows, "Not enough feature families are available for local explanations.")
+        reference_values = _reference_feature_values(reference_rows, feature_columns)
+        base = rows[feature_columns].copy()
+        base_predicted = (
+            np.asarray(list(predicted), dtype=float)
+            if predicted is not None
+            else np.asarray(model.predict(base), dtype=float)
+        )
+        if len(base_predicted) != len(rows):
+            return _fallback_explanations(rows, "Prediction count did not match the forecast rows.")
+
+        family_deltas: dict[str, np.ndarray] = {}
+        for family, columns in families.items():
+            ablated = base.copy()
+            for column in columns:
+                ablated[column] = reference_values.get(column, np.nan)
+            family_deltas[family] = base_predicted - np.asarray(model.predict(ablated), dtype=float)
+
+        raw_deltas: dict[str, np.ndarray] = {}
+        for column in feature_columns:
+            ablated = base.copy()
+            ablated[column] = reference_values.get(column, np.nan)
+            raw_deltas[column] = base_predicted - np.asarray(model.predict(ablated), dtype=float)
+
+        rows_reset = rows.reset_index(drop=True)
+        records = []
+        for row_index, row in rows_reset.iterrows():
+            family_values = {
+                family: _finite_float_or_none(deltas[row_index])
+                for family, deltas in family_deltas.items()
+            }
+            technical = _technical_contributions(raw_deltas, feature_columns, families, row_index)
+            cards = _explanation_cards(row, family_values, technical)
+            records.append(
+                {
+                    "explanation_status": "ok",
+                    "explanation_error": None,
+                    "explanation_cards": cards,
+                    "technical_contributions": technical,
+                }
+            )
+        return pd.DataFrame(records, index=rows.index)
+    except Exception as exc:  # pragma: no cover - defensive fallback for dashboard artifacts
+        return _fallback_explanations(rows, str(exc))
+
+
+def _reference_feature_values(rows: pd.DataFrame, feature_columns: list[str]) -> dict[str, Any]:
+    values: dict[str, Any] = {}
+    for column in feature_columns:
+        if column not in rows:
+            values[column] = np.nan
+            continue
+        series = pd.to_numeric(rows[column], errors="coerce")
+        valid = series.dropna()
+        if valid.empty:
+            values[column] = np.nan
+            continue
+        unique_values = set(valid.unique())
+        if unique_values.issubset({0, 1, 0.0, 1.0}):
+            counts = valid.value_counts().sort_index()
+            values[column] = float(counts[counts.eq(counts.max())].index[0])
+        else:
+            values[column] = float(valid.median())
+    return values
+
+
+def _fallback_explanations(rows: pd.DataFrame, reason: str) -> pd.DataFrame:
+    cards = [
+        {
+            "family": "fallback",
+            "family_label": "Explanation unavailable",
+            "title": "Explanation could not be computed",
+            "detail": "The forecast is still shown, but this artifact does not contain a reliable local explanation.",
+            "direction": "unknown",
+            "delta_mw": None,
+            "icon": "i",
+        }
+    ]
+    return pd.DataFrame(
+        [
+            {
+                "explanation_status": "fallback",
+                "explanation_error": str(reason),
+                "explanation_cards": cards,
+                "technical_contributions": [],
+            }
+            for _ in range(len(rows))
+        ],
+        index=rows.index,
+    )
+
+
+def _technical_contributions(
+    raw_deltas: dict[str, np.ndarray],
+    feature_columns: list[str],
+    families: dict[str, list[str]],
+    row_index: int,
+    *,
+    limit: int = 8,
+) -> list[dict[str, Any]]:
+    family_by_column = {
+        column: family
+        for family, columns in families.items()
+        for column in columns
+    }
+    rows: list[dict[str, Any]] = []
+    for column in feature_columns:
+        delta = _finite_float_or_none(raw_deltas[column][row_index])
+        if delta is None:
+            continue
+        rows.append(
+            {
+                "feature": column,
+                "family": family_by_column.get(column, "other"),
+                "family_label": EXPLANATION_FAMILY_LABELS.get(family_by_column.get(column, ""), "Other"),
+                "direction": _direction(delta),
+                "delta_mw": delta,
+            }
+        )
+    rows.sort(key=lambda item: (-abs(item["delta_mw"]), item["feature"]))
+    return rows[:limit]
+
+
+def _explanation_cards(
+    row: pd.Series,
+    family_values: dict[str, float | None],
+    technical: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    candidates = [
+        (family, delta)
+        for family, delta in family_values.items()
+        if delta is not None
+    ]
+    candidates.sort(
+        key=lambda item: (
+            -abs(item[1]),
+            EXPLANATION_FAMILY_ORDER.index(item[0]) if item[0] in EXPLANATION_FAMILY_ORDER else 99,
+        )
+    )
+    selected = candidates[: min(4, max(2, len(candidates)))]
+    cards = []
+    for family, delta in selected:
+        title, detail = _family_message(row, family, delta, technical)
+        cards.append(
+            {
+                "family": family,
+                "family_label": EXPLANATION_FAMILY_LABELS.get(family, family.replace("_", " ").title()),
+                "title": title,
+                "detail": detail,
+                "direction": _direction(delta),
+                "delta_mw": _finite_float_or_none(delta),
+                "icon": EXPLANATION_FAMILY_ICONS.get(family, "i"),
+            }
+        )
+    return cards
+
+
+def _family_message(
+    row: pd.Series,
+    family: str,
+    delta: float,
+    technical: list[dict[str, Any]],
+) -> tuple[str, str]:
+    direction_text = "higher" if delta >= 0 else "lower"
+    magnitude = _format_mw(abs(delta))
+    if family == "weather":
+        driver = _strongest_human_feature(technical, "weather") or "Weather"
+        return (
+            f"{driver} is pushing demand {direction_text}",
+            f"Weather signals move this model forecast by about {magnitude} versus a typical weather reference.",
+        )
+    if family == "calendar":
+        if _row_bool(row, "target_is_holiday"):
+            title = f"Holiday timing is pushing demand {direction_text}"
+        elif _row_bool(row, "target_is_weekend") and delta < 0:
+            title = "Weekend effect is reducing demand"
+        elif _row_bool(row, "target_is_weekend"):
+            title = "Weekend timing is lifting demand"
+        else:
+            title = f"Calendar timing is pushing demand {direction_text}"
+        return (
+            title,
+            f"Hour, weekday, season, holiday and DST timing shift the forecast by about {magnitude}.",
+        )
+    if family == "recent_demand":
+        return (
+            f"Recent demand is pushing the forecast {direction_text}",
+            f"The latest 1h/3h/6h lags and rolling demand pattern move the forecast by about {magnitude}.",
+        )
+    if family == "weekly_pattern":
+        origin = _finite_float_or_none(row.get("origin_demand_mw"))
+        last_week = _finite_float_or_none(row.get("demand_lag_168h_mw"))
+        if origin is not None and last_week is not None:
+            comparison = "lower" if origin < last_week else "higher"
+            title = f"Demand is {comparison} than last week at the same hour"
+        else:
+            title = f"The weekly pattern is pushing demand {direction_text}"
+        return (
+            title,
+            f"The 168-hour comparison shifts the model forecast {direction_text} by about {magnitude}.",
+        )
+    if family == "data_quality":
+        gaps = _finite_float_or_none(row.get("weather_missing_count"))
+        coverage = _finite_float_or_none(row.get("weather_population_coverage"))
+        if gaps and gaps > 0:
+            title = f"Weather data gaps are pushing demand {direction_text}"
+        elif coverage is not None and coverage < 0.98:
+            title = f"Weather coverage is pushing demand {direction_text}"
+        else:
+            title = f"Data provenance is pushing demand {direction_text}"
+        return (
+            title,
+            f"Coverage, missing-value and source-age signals shift the model forecast by about {magnitude}.",
+        )
+    return (
+        f"{EXPLANATION_FAMILY_LABELS.get(family, family)} is pushing demand {direction_text}",
+        f"This feature group shifts the model forecast by about {magnitude}.",
+    )
+
+
+def _strongest_human_feature(technical: list[dict[str, Any]], family: str) -> str | None:
+    for row in technical:
+        if row.get("family") == family:
+            return FEATURE_LABELS.get(str(row.get("feature")), EXPLANATION_FAMILY_LABELS.get(family))
+    return None
+
+
+def _row_bool(row: pd.Series, column: str) -> bool:
+    value = row.get(column)
+    return bool(pd.notna(value) and float(value) == 1.0)
+
+
+def _direction(delta: float) -> str:
+    if delta > 0:
+        return "up"
+    if delta < 0:
+        return "down"
+    return "neutral"
+
+
+def _format_mw(value: float) -> str:
+    if value >= 1000:
+        return f"{value / 1000:.1f} GW"
+    return f"{value:.0f} MW"
+
+
+def _finite_float_or_none(value: Any) -> float | None:
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not np.isfinite(result):
+        return None
+    return result
+
+
+def prediction_intervals(
+    *,
+    model_bundle: dict[str, Any],
+    horizon: int,
+    model: Any,
+    train_rows: pd.DataFrame,
+    test_rows: pd.DataFrame,
+    feature_columns: list[str],
+    predicted: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, str]:
+    """Return per-row prediction intervals, preferring stored quantile models."""
+    interval_models = model_bundle.get("interval_models", {}).get(int(horizon))
+    if isinstance(interval_models, dict) and {"lower", "upper"}.issubset(interval_models):
+        lower = np.asarray(interval_models["lower"].predict(test_rows[feature_columns]), dtype=float)
+        upper = np.asarray(interval_models["upper"].predict(test_rows[feature_columns]), dtype=float)
+        method = model_bundle.get("interval_definition", {}).get(
+            "method",
+            "hist_gradient_boosting_quantile",
+        )
+    else:
+        train_predicted = np.asarray(model.predict(train_rows[feature_columns]), dtype=float)
+        residual = np.asarray(train_rows[TARGET_COLUMN], dtype=float) - train_predicted
+        residual = residual[np.isfinite(residual)]
+        if residual.size:
+            lower = predicted + float(np.quantile(residual, INTERVAL_QUANTILES[0]))
+            upper = predicted + float(np.quantile(residual, INTERVAL_QUANTILES[1]))
+        else:
+            lower = np.full(len(predicted), np.nan)
+            upper = np.full(len(predicted), np.nan)
+        method = "training_residual_empirical"
+    lower_bound = np.minimum.reduce([lower, upper, predicted])
+    upper_bound = np.maximum.reduce([lower, upper, predicted])
+    return lower_bound, upper_bound, method
+
+
+def interval_metrics(
+    actual: Iterable[float],
+    lower: Iterable[float],
+    upper: Iterable[float],
+) -> dict[str, Any]:
+    actual_array = np.asarray(list(actual), dtype=float)
+    lower_array = np.asarray(list(lower), dtype=float)
+    upper_array = np.asarray(list(upper), dtype=float)
+    valid = ~(np.isnan(actual_array) | np.isnan(lower_array) | np.isnan(upper_array))
+    if not valid.any():
+        return {
+            "prediction_interval_coverage": None,
+            "prediction_interval_mean_width_mw": None,
+        }
+    in_interval = (actual_array[valid] >= lower_array[valid]) & (actual_array[valid] <= upper_array[valid])
+    return {
+        "prediction_interval_coverage": float(in_interval.mean()),
+        "prediction_interval_mean_width_mw": float(np.mean(upper_array[valid] - lower_array[valid])),
+    }
+
+
+def horizon_trust_summary(comparison: dict[str, Any], model_metrics: dict[str, Any]) -> dict[str, Any]:
+    improvement = comparison.get("improvement_vs_strongest_baseline_percent")
+    beats = bool(improvement is not None and pd.notna(improvement) and float(improvement) > 0)
+    return {
+        "model_beats_strongest_baseline": beats,
+        "reliability_badge": "Model edge detected" if beats else "Experimental horizon",
+        "reliability_status": "green" if beats else "yellow",
+        "data_coverage": model_metrics.get("coverage"),
+    }
+
+
 def evaluate_models(
     features: pd.DataFrame,
     model_bundle: dict[str, Any],
@@ -746,15 +1172,35 @@ def evaluate_models(
         horizon = int(horizon)
         rows = add_target_calendar_features(valid_supervised_rows(features, horizon), metadata["feature_config"]["timezone"])
         train_config = TrainConfig(**model_bundle["train_config"])
-        _, test_rows = chronological_split(rows, config=train_config)
+        train_rows, test_rows = chronological_split(rows, config=train_config)
         model = model_bundle["models"][horizon]
         horizon_feature_columns = model_bundle.get("feature_columns_by_horizon", {}).get(str(horizon), feature_columns)
-        predicted = model.predict(test_rows[horizon_feature_columns])
+        predicted = np.asarray(model.predict(test_rows[horizon_feature_columns]), dtype=float)
+        interval_lower, interval_upper, interval_method = prediction_intervals(
+            model_bundle=model_bundle,
+            horizon=horizon,
+            model=model,
+            train_rows=train_rows,
+            test_rows=test_rows,
+            feature_columns=horizon_feature_columns,
+            predicted=predicted,
+        )
         predictions = test_rows[
             ["origin_timestamp", "target_timestamp", "horizon_hours", TARGET_COLUMN, "target_hour", "target_season"]
         ].copy()
         predictions["model_predicted_mw"] = predicted
+        predictions["model_interval_lower_mw"] = interval_lower
+        predictions["model_interval_upper_mw"] = interval_upper
+        predictions["prediction_interval_method"] = interval_method
         predictions = add_baseline_predictions(predictions, features)
+        explanations = explain_forecast_rows(
+            test_rows,
+            model=model,
+            feature_columns=horizon_feature_columns,
+            reference_rows=train_rows,
+            predicted=predicted,
+        )
+        predictions = pd.concat([predictions, explanations], axis=1)
         prediction_parts.append(predictions)
 
         model_metrics = regression_metrics(predictions[TARGET_COLUMN], predictions["model_predicted_mw"])
@@ -767,20 +1213,26 @@ def evaluate_models(
             if metrics["sample_count"] and metrics["mae_mw"] is not None:
                 baseline_metric_rows.append(row)
         strongest = min(baseline_metric_rows, key=lambda row: row["mae_mw"]) if baseline_metric_rows else None
-        comparison_rows.append(
-            {
-                "horizon_hours": horizon,
-                "model_mae_mw": model_metrics["mae_mw"],
-                "strongest_baseline": strongest["model"] if strongest else None,
-                "strongest_baseline_mae_mw": strongest["mae_mw"] if strongest else None,
-                "improvement_vs_strongest_baseline_percent": (
-                    100.0 * (strongest["mae_mw"] - model_metrics["mae_mw"]) / strongest["mae_mw"]
-                    if strongest and strongest["mae_mw"]
-                    else None
-                ),
-                "baseline_eligible_count": len(baseline_metric_rows),
-            }
-        )
+        comparison = {
+            "horizon_hours": horizon,
+            "model_mae_mw": model_metrics["mae_mw"],
+            "strongest_baseline": strongest["model"] if strongest else None,
+            "strongest_baseline_mae_mw": strongest["mae_mw"] if strongest else None,
+            "improvement_vs_strongest_baseline_percent": (
+                100.0 * (strongest["mae_mw"] - model_metrics["mae_mw"]) / strongest["mae_mw"]
+                if strongest and strongest["mae_mw"]
+                else None
+            ),
+            "baseline_eligible_count": len(baseline_metric_rows),
+            "prediction_interval_method": interval_method,
+            **interval_metrics(
+                predictions[TARGET_COLUMN],
+                predictions["model_interval_lower_mw"],
+                predictions["model_interval_upper_mw"],
+            ),
+        }
+        comparison.update(horizon_trust_summary(comparison, model_metrics))
+        comparison_rows.append(comparison)
         segment_rows.extend(_segment_metrics(predictions, horizon, min_segment_samples))
 
     all_predictions = (
@@ -796,6 +1248,16 @@ def evaluate_models(
         "model_kind": model_bundle["model_kind"],
         "source": metadata.get("source"),
         "feature_data_digest": metadata.get("data_digest"),
+        "model_generated_at": model_bundle.get("generated_at"),
+        "interval_definition": model_bundle.get(
+            "interval_definition",
+            {
+                "method": "training_residual_empirical",
+                "lower_quantile": INTERVAL_QUANTILES[0],
+                "upper_quantile": INTERVAL_QUANTILES[1],
+                "coverage_label": "80% central prediction interval",
+            },
+        ),
         "training_periods": model_bundle["horizon_metadata"],
         "data_audit": metadata.get("audit", {}),
         "metrics": metric_rows,
@@ -804,6 +1266,7 @@ def evaluate_models(
         "predictions": _json_records(all_predictions),
         "skipped_horizons": model_bundle.get("skipped_horizons", {}),
         "disclaimer": "Experimental weather-aware model; not an RTE operational forecast.",
+        "explanation_disclaimer": EXPLANATION_DISCLAIMER,
     }
 
 
