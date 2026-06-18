@@ -60,6 +60,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-train-samples", type=int, default=96)
     parser.add_argument("--min-test-samples", type=int, default=24)
     parser.add_argument("--min-segment-samples", type=int, default=24)
+    parser.add_argument(
+        "--fail-on-readiness-warning",
+        action="store_true",
+        help="Exit non-zero after evaluation if history/weather readiness checks do not pass.",
+    )
     return parser.parse_args()
 
 
@@ -184,6 +189,15 @@ def main() -> int:
             bundle = load_model_bundle(args.model_output)
         evaluation = evaluate_models(features, bundle, min_segment_samples=args.min_segment_samples)
         save_evaluation(evaluation, args.evaluation_output)
+        failed = [check for check in evaluation.get("readiness", {}).get("checks", []) if not check.get("passed")]
+        if failed:
+            details = ", ".join(
+                f"{check['name']} observed={check.get('observed')} threshold={check.get('threshold')}"
+                for check in failed
+            )
+            print(f"Readiness warnings: {details}")
+            if args.fail_on_readiness_warning:
+                raise SystemExit(2)
     print(
         f"Backfilled {args.start_year}-{args.end_year}: energy_rows={energy_rows:,}, "
         f"weather_rows={weather_rows:,}, features={len(features):,}"

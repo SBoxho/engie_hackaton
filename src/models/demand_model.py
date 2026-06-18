@@ -96,6 +96,15 @@ class TrainConfig:
     min_validation_samples: int = 24
 
 
+@dataclass(frozen=True)
+class DataReadinessConfig:
+    """Lightweight gates for demo-ready multi-season demand artifacts."""
+
+    min_history_days: float = 120.0
+    min_weather_overlap_fraction: float = 0.85
+    min_weather_population_coverage: float = 0.75
+
+
 def utc_iso(value: pd.Timestamp | datetime | None) -> str | None:
     if value is None or pd.isna(value):
         return None
@@ -694,9 +703,11 @@ def train_models(
     horizon_metadata: dict[str, Any] = {}
     validation_rows: list[dict[str, Any]] = []
     skipped: dict[str, str] = {}
+    horizon_eligibility: dict[str, Any] = {}
     for horizon in metadata["feature_config"]["horizons_hours"]:
         horizon = int(horizon)
         rows = add_target_calendar_features(valid_supervised_rows(features, horizon), metadata["feature_config"]["timezone"])
+        horizon_eligibility[str(horizon)] = _horizon_eligibility_row(rows, config)
         if rows.empty:
             skipped[str(horizon)] = "no valid exact target rows in sufficiently continuous periods"
             continue
@@ -704,6 +715,8 @@ def train_models(
             train_rows, test_rows = chronological_split(rows, config=config)
         except ValueError as exc:
             skipped[str(horizon)] = str(exc)
+            horizon_eligibility[str(horizon)]["eligible"] = False
+            horizon_eligibility[str(horizon)]["reason"] = str(exc)
             continue
         horizon_feature_columns = _informative_feature_columns(train_rows, feature_columns)
         if not horizon_feature_columns:
@@ -768,7 +781,16 @@ def train_models(
             "test_end_utc": utc_iso(test_rows["target_timestamp"].max()),
             "train_samples": int(len(train_rows)),
             "test_samples": int(len(test_rows)),
+            "split_strategy": "chronological_holdout_by_target_timestamp",
         }
+        horizon_eligibility[str(horizon)].update(
+            {
+                "eligible": True,
+                "reason": "eligible",
+                "train_samples": int(len(train_rows)),
+                "test_samples": int(len(test_rows)),
+            }
+        )
     if not models:
         raise ValueError(f"No horizon had enough supervised samples to train. Skipped: {skipped}")
     return {
@@ -789,8 +811,29 @@ def train_models(
         },
         "horizons": sorted(models),
         "horizon_metadata": horizon_metadata,
+        "horizon_eligibility": horizon_eligibility,
         "validation_metrics": validation_rows,
         "skipped_horizons": skipped,
+    }
+
+
+def _horizon_eligibility_row(rows: pd.DataFrame, config: TrainConfig) -> dict[str, Any]:
+    sample_count = int(len(rows))
+    test_count = max(config.min_test_samples, int(np.ceil(sample_count * config.test_fraction))) if sample_count else 0
+    train_count = max(0, sample_count - test_count)
+    eligible = train_count >= config.min_train_samples and test_count >= config.min_test_samples
+    reason = "eligible" if eligible else (
+        f"Need at least {config.min_train_samples} train and {config.min_test_samples} test samples; "
+        f"{sample_count} supervised samples produce {train_count} train and {test_count} test."
+    )
+    return {
+        "eligible": bool(eligible),
+        "reason": reason,
+        "supervised_samples": sample_count,
+        "required_min_train_samples": int(config.min_train_samples),
+        "required_min_test_samples": int(config.min_test_samples),
+        "candidate_train_samples": int(train_count),
+        "candidate_test_samples": int(test_count),
     }
 
 
@@ -1191,6 +1234,54 @@ def horizon_trust_summary(comparison: dict[str, Any], model_metrics: dict[str, A
     }
 
 
+def data_readiness_summary(
+    metadata: dict[str, Any],
+    *,
+    config: DataReadinessConfig | None = None,
+) -> dict[str, Any]:
+    """Summarize minimum history and weather checks without blocking local live mode."""
+    config = config or DataReadinessConfig()
+    audit = metadata.get("audit", {}) if isinstance(metadata, dict) else {}
+    start = pd.to_datetime(audit.get("start_utc"), utc=True, errors="coerce")
+    end = pd.to_datetime(audit.get("end_utc"), utc=True, errors="coerce")
+    history_days = None
+    if pd.notna(start) and pd.notna(end):
+        history_days = float((end - start) / pd.Timedelta(days=1))
+    weather = audit.get("weather") or {}
+    overlap = weather.get("overlap_fraction_of_energy_timestamps")
+    mean_population = weather.get("mean_population_coverage")
+    checks = [
+        {
+            "name": "minimum_history_length",
+            "passed": bool(history_days is not None and history_days >= config.min_history_days),
+            "observed": history_days,
+            "threshold": config.min_history_days,
+            "unit": "days",
+        },
+        {
+            "name": "minimum_weather_overlap",
+            "passed": bool(overlap is not None and float(overlap) >= config.min_weather_overlap_fraction),
+            "observed": None if overlap is None else float(overlap),
+            "threshold": config.min_weather_overlap_fraction,
+            "unit": "fraction",
+        },
+        {
+            "name": "minimum_weather_population_coverage",
+            "passed": bool(mean_population is not None and float(mean_population) >= config.min_weather_population_coverage),
+            "observed": None if mean_population is None else float(mean_population),
+            "threshold": config.min_weather_population_coverage,
+            "unit": "fraction",
+        },
+    ]
+    return {
+        "passed": all(check["passed"] for check in checks),
+        "checks": checks,
+        "history_start_utc": audit.get("start_utc"),
+        "history_end_utc": audit.get("end_utc"),
+        "eligible_continuous_period_count": len(audit.get("eligible_continuous_periods", [])),
+    }
+
+
 def evaluate_models(
     features: pd.DataFrame,
     model_bundle: dict[str, Any],
@@ -1304,6 +1395,9 @@ def evaluate_models(
             },
         ),
         "training_periods": model_bundle["horizon_metadata"],
+        "horizon_splits": model_bundle["horizon_metadata"],
+        "horizon_eligibility": model_bundle.get("horizon_eligibility", {}),
+        "readiness": data_readiness_summary(metadata),
         "data_audit": metadata.get("audit", {}),
         "metrics": metric_rows,
         "baseline_comparison": comparison_rows,

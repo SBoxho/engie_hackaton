@@ -21,6 +21,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model", type=Path, default=settings.processed_dir / "demand_model" / "demand_hgb_model.pkl")
     parser.add_argument("--output", type=Path, default=settings.processed_dir / "demand_model" / "evaluation.json")
     parser.add_argument("--min-segment-samples", type=int, default=24)
+    parser.add_argument(
+        "--fail-on-readiness-warning",
+        action="store_true",
+        help="Exit non-zero when minimum history/weather checks do not pass.",
+    )
     return parser.parse_args()
 
 
@@ -34,6 +39,16 @@ def main() -> int:
         f"Wrote {len(evaluation['predictions']):,} model predictions and "
         f"{len(evaluation['metrics'])} metric rows to {args.output}"
     )
+    readiness = evaluation.get("readiness", {})
+    failed = [check for check in readiness.get("checks", []) if not check.get("passed")]
+    if failed:
+        details = ", ".join(
+            f"{check['name']} observed={check.get('observed')} threshold={check.get('threshold')}"
+            for check in failed
+        )
+        print(f"Readiness warnings: {details}")
+        if args.fail_on_readiness_warning:
+            return 2
     return 0
 
 
