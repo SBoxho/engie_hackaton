@@ -457,10 +457,12 @@ render_deployment_health(
     calibration_status=calibration_status,
 )
 
-st.markdown('<div class="ep-eyebrow">France electricity weather</div>', unsafe_allow_html=True)
-st.markdown('<div class="ep-hero">Energy Pulse France</div>', unsafe_allow_html=True)
+pressure_forecast, pressure_source = build_pressure_forecast(data, latest["timestamp"])
+
+st.markdown('<div class="ep-eyebrow">Energy Pulse France Command Centre</div>', unsafe_allow_html=True)
+st.markdown('<div class="ep-hero">Now, next, why, act.</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="ep-subtitle">A three-minute jury story: observe the live grid, understand what is moving demand, and act by shifting flexible use to better hours.</div>',
+    '<div class="ep-subtitle">A one-minute command centre for non-technical judges: see the live French grid state, preview the next 24 hours, understand the main drivers, then open the demand-shifting simulator.</div>',
     unsafe_allow_html=True,
 )
 status_badge(source_status, "blue")
@@ -479,44 +481,20 @@ source_badges(
 if settings.is_demo_mode:
     message_box(
         "Demo data mode is active",
-        "This public deployment is using the committed demo_data bundle and does not call external APIs unless DEMO_ALLOW_EXTERNAL_API=1 is set.",
+        "This public deployment uses the committed demo_data bundle and does not call external APIs unless DEMO_ALLOW_EXTERNAL_API=1 is set.",
         kind="info",
     )
 
-section_header("Demo narrative", "Observe, understand, act")
-story_steps(
-    [
-        (
-            "Observe",
-            "What is the grid doing?",
-            "Start with live demand, CO2 intensity, EcoWatt, weather, and the current grid mood.",
-        ),
-        (
-            "Understand",
-            "Why is demand changing?",
-            "Connect the pulse to weather, recent demand pressure, generation mix, and calibrated thresholds.",
-        ),
-        (
-            "Act",
-            "When should we shift usage?",
-            "Use the next 24 hours to spot easier and lower-carbon windows for flexible appliances.",
-        ),
-    ]
+section_header(
+    "Command centre narrative",
+    "Observe, understand, act",
+    "The homepage keeps the strategic hackathon story intact while making the live grid, forecast, drivers, and simulator visible in one scroll.",
 )
 
-render_how_it_works()
-
 section_header(
-    "Why it matters",
-    "From grid tension to citizen action",
-    "The demo links national electricity signals to choices that a household, campus, or city can understand quickly.",
-)
-render_why_it_matters()
-
-section_header(
-    "Observe",
-    "Current grid pulse",
-    "These cards answer the first jury question: what is happening on the French electricity system right now?",
+    "Now",
+    "Current grid state",
+    "The first screen answers the judge's key question: what is happening on the French electricity system right now?",
 )
 cols = st.columns(6)
 with cols[0]:
@@ -544,7 +522,81 @@ with cols[5]:
     metric_card("Last update", f"{local_time:%H:%M}", f"{local_time:%d %b %Y}, Europe/Paris.", icon="Now")
 
 section_header(
+    "Next",
+    "Next-24-hour pressure preview",
+    "A compact AI forecast doorway: pressure bands summarize when the grid looks easier or tighter before users open the full forecast workspace.",
+)
+render_forecast_cards(pressure_forecast)
+viz_note(
+    "24-hour pressure strip",
+    "Bars translate the best cached short-horizon signal into plain-language pressure bands for the next day.",
+    source=pressure_source,
+)
+st.plotly_chart(pressure_timeline(pressure_forecast), width="stretch")
+
+section_header(
+    "Why",
+    "What is driving today?",
+    "Plain-language cards separate demand, weather, supply mix, and carbon so the story is understandable without reading raw tables.",
+)
+history_quantiles = data["consumption_mw"].quantile([0.25, 0.60, 0.85])
+current_pressure, _, _ = demand_pressure(float(latest["consumption_mw"]), history_quantiles)
+renewable_share = float(latest.get("renewable_share", 0))
+co2_intensity = float(latest.get("co2_intensity_g_per_kwh", 0))
+driver_cols = st.columns(4)
+with driver_cols[0]:
+    driver_card(
+        "Use",
+        f"Demand is {current_pressure.lower()}",
+        f"Current use is {format_mw(float(latest['consumption_mw']))}, compared with the recent range.",
+    )
+with driver_cols[1]:
+    driver_card("Met", weather_headline, weather_detail)
+with driver_cols[2]:
+    driver_card(
+        "Mix",
+        "Clean supply is visible",
+        f"Renewables are contributing {renewable_share:.1%} of measured domestic generation.",
+    )
+with driver_cols[3]:
+    driver_card(
+        "CO2",
+        "Carbon signal stays explicit",
+        f"The latest source intensity is {co2_intensity:,.0f} g/kWh, shown separately from demand.",
+    )
+
+section_header(
+    "Why it matters",
+    "From grid tension to citizen action",
+    "The demo links national electricity signals to choices that a household, campus, or city can understand quickly.",
+)
+render_why_it_matters()
+
+section_header(
     "Act",
+    "Turn the signal into a choice",
+    "The simulator is the main action path: pick a flexible appliance, move it away from pressure, and compare the outcome.",
+)
+cta_cols = st.columns([1.15, 0.85])
+with cta_cols[0]:
+    explanation_card(
+        "Open the demand-shifting simulator.",
+        f"Start with today's best shift window: {energy_summary['shift']}. The simulator turns the forecast into a concrete household action.",
+        label="Primary action",
+        icon="Tune",
+        status=shift_status,
+    )
+    st.page_link("pages/7_demand_shifting_simulator.py", label="Launch simulator", icon=":material/tune:")
+with cta_cols[1]:
+    horizon_forecast_card(
+        "Hours to avoid",
+        energy_summary["avoid"],
+        "These show the strongest watch or tense signal in the 24-hour outlook.",
+        status=avoid_status,
+    )
+
+section_header(
+    "AI forecast",
     "24h Energy Weather",
     "A public-friendly outlook for normal use, flexible shifting, and careful hours. Text labels are shown on the chart so the meaning is not color-only.",
 )
@@ -584,78 +636,8 @@ message_box(
     "This is a demo outlook, not an RTE operational forecast.",
     kind="info",
 )
-with st.expander("Advanced values behind the 24h Energy Weather", expanded=False):
-    viz_note(
-        "Technical values behind each hour",
-        "This table exposes the exact demand, CO2, threshold, model, and source fields used to create the public labels.",
-        source="Traceability",
-    )
-    advanced_columns = [
-        "target",
-        "status",
-        "ecowatt_status",
-        "ecowatt_label",
-        "ecowatt_source",
-        "demand_signal_mw",
-        "demand_source",
-        "model_predicted_mw",
-        "rte_forecast_mw",
-        "reference_consumption_mw",
-        "co2_intensity_g_per_kwh",
-        "co2_source",
-        "threshold_source",
-        "demand_high_threshold_mw",
-        "co2_low_threshold",
-        "co2_high_threshold",
-    ]
-    available_columns = [column for column in advanced_columns if column in energy_weather.timeline]
-    st.dataframe(energy_weather.timeline[available_columns], width="stretch", hide_index=True)
-    st.json(energy_weather.metadata)
 
-section_header(
-    "Understand",
-    "What is moving the pulse?",
-    "These drivers explain the live mood in plain language before anyone has to inspect the raw data.",
-)
-history_quantiles = data["consumption_mw"].quantile([0.25, 0.60, 0.85])
-current_pressure, _, _ = demand_pressure(float(latest["consumption_mw"]), history_quantiles)
-renewable_share = float(latest.get("renewable_share", 0))
-co2_intensity = float(latest.get("co2_intensity_g_per_kwh", 0))
-driver_cols = st.columns(4)
-with driver_cols[0]:
-    driver_card(
-        "Use",
-        f"Demand is {current_pressure.lower()}",
-        f"Current use is {format_mw(float(latest['consumption_mw']))}, compared with the recent range.",
-    )
-with driver_cols[1]:
-    driver_card("Met", weather_headline, weather_detail)
-with driver_cols[2]:
-    driver_card(
-        "Mix",
-        "Clean supply is visible",
-        f"Renewables are contributing {renewable_share:.1%} of measured domestic generation.",
-    )
-with driver_cols[3]:
-    driver_card(
-        "CO2",
-        "Carbon signal stays explicit",
-        f"The latest source intensity is {co2_intensity:,.0f} g/kWh, shown separately from demand.",
-    )
-
-section_header("Action", "What can I do?")
-explanation_card(
-    "Try shifting flexible demand away from high-pressure hours.",
-    "Choose an appliance, move it on the timeline, and compare the pressure signal once the simulator is connected.",
-    label="Demand shifting",
-    icon="Tune",
-)
-st.page_link("pages/7_demand_shifting_simulator.py", label="Open demand-shifting simulator", icon=":material/tune:")
-
-section_header("Trust", "Forecast check")
-render_forecast_check(model_payload)
-
-with st.expander("Advanced / Data Science", expanded=False):
+with st.expander("Advanced / Data Science and raw values", expanded=False):
     st.write("Deep-dive pages for the technical jury and for continuing development.")
     link_cols = st.columns(3)
     with link_cols[0]:
@@ -669,29 +651,35 @@ with st.expander("Advanced / Data Science", expanded=False):
         st.page_link("pages/6_demand_model.py", label="Demand model")
 
     st.divider()
+    render_how_it_works()
+    render_forecast_check(model_payload)
+
+    viz_note(
+        "Technical values behind each hour",
+        "This table exposes the exact demand, CO2, threshold, model, and source fields used to create the public labels.",
+        source="Traceability",
+    )
+    advanced_columns = [
+        "target", "status", "ecowatt_status", "ecowatt_label", "ecowatt_source",
+        "demand_signal_mw", "demand_source", "model_predicted_mw", "rte_forecast_mw",
+        "reference_consumption_mw", "co2_intensity_g_per_kwh", "co2_source",
+        "threshold_source", "demand_high_threshold_mw", "co2_low_threshold", "co2_high_threshold",
+    ]
+    available_columns = [column for column in advanced_columns if column in energy_weather.timeline]
+    st.dataframe(energy_weather.timeline[available_columns], width="stretch", hide_index=True)
+    st.json(energy_weather.metadata)
+
     left, right = st.columns([1.35, 1])
     with left:
         st.subheader("Demand pulse detail")
-        viz_note(
-            "Recent demand trend",
-            "This line shows how national consumption has moved over the recent window, making peaks and recovery periods visible.",
-            source="RTE / ODRE",
-        )
+        viz_note("Recent demand trend", "National consumption over the recent window.", source="RTE / ODRE")
         st.plotly_chart(consumption_chart(data), width="stretch")
         st.subheader("What powers France")
-        viz_note(
-            "Generation mix over time",
-            "The stacked area chart shows which production sources are contributing as demand changes.",
-            source="RTE / ODRE",
-        )
+        viz_note("Generation mix over time", "Which production sources are contributing as demand changes.", source="RTE / ODRE")
         st.plotly_chart(production_area_chart(data), width="stretch")
     with right:
         st.subheader("Latest energy mix")
-        viz_note(
-            "Current production share",
-            "The donut summarizes the latest measured mix so the CO2 signal can be discussed separately from demand.",
-            source="RTE / ODRE",
-        )
+        viz_note("Current production share", "The latest measured mix behind the CO2 discussion.", source="RTE / ODRE")
         st.plotly_chart(mix_donut(latest), width="stretch")
 
     if weather.empty:
