@@ -174,6 +174,12 @@ apply_theme()
 st.title("Forecast explainability")
 st.markdown('<div class="ep-subtitle">Grouped ablation explanations for recent demand forecasts, with plain-language drivers and technical evidence.</div>', unsafe_allow_html=True)
 st.caption(settings.app_mode_label)
+if settings.is_demo_mode:
+    message_box(
+        "Judge mode: demo data",
+        "This page reads the committed evaluation artifact only, so explanations stay reproducible during the final demo.",
+        kind="info",
+    )
 
 default_path = settings.demo_model_evaluation_path if settings.is_demo_mode else DEFAULT_EVALUATION
 artifact_path = st.sidebar.text_input("Evaluation artifact", str(default_path), disabled=settings.is_demo_mode)

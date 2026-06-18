@@ -56,7 +56,7 @@ $env:APP_MODE="live"
 python run_app.py
 ```
 
-Demo mode never calls external APIs unless `DEMO_ALLOW_EXTERNAL_API=1` is explicitly set. Keep that value at `0` for Streamlit Community Cloud, Hugging Face Spaces, and hackathon judging.
+Demo mode never calls external APIs unless `DEMO_ALLOW_EXTERNAL_API=1` is explicitly set. Keep that value at `0` for Streamlit Community Cloud, Hugging Face Spaces, and hackathon judging. In this judge-safe state the homepage sidebar reports `APP_MODE=demo, DEMO_ALLOW_EXTERNAL_API=0`, the app shows a **Judge mode: demo data** cue on the forecast, explainability, and simulator pages, and CI smoke tests fail if those pages attempt a network request.
 
 To refresh the committed demo bundle after regenerating local processed artifacts:
 
@@ -90,6 +90,8 @@ ENERGY_PULSE_HISTORY_HOURS="72"
 ```
 
 5. Deploy. The sidebar should show `Ready for public demo` or only optional missing artifacts.
+
+For final judging, open the homepage, **Forecast Cockpit**, **Forecast Explainability**, and **Flatten the Peak** simulator once after deployment. Each should show the demo-mode cue and load from the committed artifacts without requiring credentials or a warm local cache.
 
 No Streamlit secrets are required for the default demo deployment. Do not upload `.env`, `data/raw/`, `data/processed/`, or local virtual environments.
 

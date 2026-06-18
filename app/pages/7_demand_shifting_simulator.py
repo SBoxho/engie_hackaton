@@ -398,6 +398,12 @@ section_header(
     "Pick one flexible action, move it away from the daily peak, and see whether your choice lowers demand pressure and carbon intensity in the available grid signal.",
 )
 st.caption(settings.app_mode_label)
+if settings.is_demo_mode:
+    message_box(
+        "Judge mode: demo data",
+        "The simulator uses the bundled grid profile, forecast artifact, EcoWatt sample, and visible appliance assumptions for a repeatable live presentation.",
+        kind="info",
+    )
 message_box(
     "Educational challenge — not an operational dispatch tool",
     "Scores are designed for learning in a live demo. Appliance energy values are visible assumptions, and optional forecast, EcoWatt, or CO2 signals gracefully fall back to demo or unavailable states.",

@@ -45,36 +45,76 @@ jobs:
       - name: Compile Python modules
         run: python -m compileall app src scripts
 
-      - name: Streamlit homepage smoke test
+      - name: Streamlit demo-mode page smoke tests
         run: |
           python - <<'PY'
+          import os
+          from unittest.mock import patch
+
           from streamlit.testing.v1 import AppTest
 
-          app = AppTest.from_file("app/main.py")
-          app.run(timeout=45)
+          if os.environ.get("APP_MODE") != "demo":
+              raise SystemExit("CI smoke tests must run with APP_MODE=demo")
+          if os.environ.get("DEMO_ALLOW_EXTERNAL_API") != "0":
+              raise SystemExit("CI smoke tests must keep DEMO_ALLOW_EXTERNAL_API=0")
 
-          if app.exception:
-              for exception in app.exception:
-                  print(exception.value)
-              raise SystemExit("Streamlit homepage raised exceptions")
+          def blocked_network(*args, **kwargs):
+              raise AssertionError("Unexpected network call while APP_MODE=demo and DEMO_ALLOW_EXTERNAL_API=0")
 
-          text = "\n".join(
-              str(element.value)
-              for collection in (app.markdown, app.caption, app.info, app.warning)
-              for element in collection
-          )
-          required_phrases = [
-              "Observe, understand, act",
-              "Why it matters",
-              "RTE / ODRÉ",
-              "Open-Meteo",
-              "ADEME",
-              "data.gouv.fr",
-              "Built for the hackathon",
+          pages = [
+              (
+                  "Homepage",
+                  "app/main.py",
+                  [
+                      "Observe, understand, act",
+                      "Why it matters",
+                      "RTE / ODRÉ",
+                      "Open-Meteo",
+                      "ADEME",
+                      "data.gouv.fr",
+                      "Built for the hackathon",
+                      "Demo data mode",
+                  ],
+              ),
+              (
+                  "Forecast cockpit",
+                  "app/pages/2_forecast.py",
+                  ["Explainable Forecast Cockpit", "Actuals versus AI forecast", "Experimental model status", "Demo data mode"],
+              ),
+              (
+                  "Explainability",
+                  "app/pages/3_explainability.py",
+                  ["Forecast explainability", "Grouped drivers", "Technical evidence", "Demo data mode"],
+              ),
+              (
+                  "Demand shifting simulator",
+                  "app/pages/7_demand_shifting_simulator.py",
+                  ["Can you flatten the peak?", "Scoreboard", "Educational challenge", "Demo data mode"],
+              ),
           ]
-          missing = [phrase for phrase in required_phrases if phrase not in text]
-          if missing:
-              raise SystemExit(f"Missing homepage demo copy: {missing}")
+
+          with patch("requests.sessions.Session.request", side_effect=blocked_network), patch(
+              "requests.api.request", side_effect=blocked_network
+          ):
+              for label, path, required_phrases in pages:
+                  app = AppTest.from_file(path)
+                  app.run(timeout=45)
+
+                  if app.exception:
+                      for exception in app.exception:
+                          print(exception.value)
+                      raise SystemExit(f"{label} raised Streamlit exceptions")
+
+                  text = "\n".join(
+                      str(element.value)
+                      for collection in (app.title, app.header, app.subheader, app.markdown, app.caption, app.info, app.warning)
+                      for element in collection
+                  )
+                  missing = [phrase for phrase in required_phrases if phrase not in text]
+                  if missing:
+                      raise SystemExit(f"{label} missing demo smoke copy: {missing}")
+
+          print("Demo-mode Streamlit smoke tests passed without network calls.")
           PY
 
       - name: Run tests

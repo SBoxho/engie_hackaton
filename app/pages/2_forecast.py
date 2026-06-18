@@ -207,6 +207,12 @@ grid, grid_source = load_grid_context()
 st.title("Explainable Forecast Cockpit")
 st.markdown('<div class="ep-subtitle">AI-centred demand forecasting with baseline honesty, pressure windows, and plain-language drivers.</div>', unsafe_allow_html=True)
 st.caption(settings.app_mode_label)
+if settings.is_demo_mode:
+    message_box(
+        "Judge mode: demo data",
+        "This page is using the committed demo bundle for deterministic forecasting, with live API calls disabled unless DEMO_ALLOW_EXTERNAL_API=1.",
+        kind="info",
+    )
 
 if predictions.empty or "model_predicted_mw" not in predictions or "target_mw" not in predictions:
     message_box("Forecast artifact missing", "Run the demand-model pipeline or export the demo bundle to unlock the cockpit. The page is stable, but no model rows are available yet.", kind="warning")

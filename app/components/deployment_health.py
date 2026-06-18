@@ -79,8 +79,17 @@ def data_check(data: pd.DataFrame, source_status: str) -> HealthCheck:
 
 def mode_check() -> HealthCheck:
     if settings.is_demo_mode:
-        api_text = "external APIs disabled" if not external_api_enabled() else "external APIs allowed"
-        return HealthCheck("Run mode", "demo", f"APP_MODE=demo, {api_text}")
+        if external_api_enabled():
+            return HealthCheck(
+                "Run mode",
+                "invalid",
+                "APP_MODE=demo, but DEMO_ALLOW_EXTERNAL_API allows live calls",
+            )
+        return HealthCheck(
+            "Run mode",
+            "demo",
+            "APP_MODE=demo, DEMO_ALLOW_EXTERNAL_API=0, external APIs disabled",
+        )
     return HealthCheck("Run mode", "live", "APP_MODE=live, live fetch/cache fallbacks enabled")
 
 
@@ -131,10 +140,15 @@ def render_deployment_health(
         st.markdown("### Deployment health")
         if failures:
             st.error(f"{len(failures)} required check(s) need attention.")
+        elif any(check.status == "invalid" for check in checks):
+            st.error("Demo safety check needs attention before judging.")
         elif warnings:
             st.warning(f"Ready with {len(warnings)} artifact warning(s).")
         else:
             st.success("Ready for public demo.")
+
+        if settings.is_demo_mode and not external_api_enabled():
+            st.info("Judge mode: deterministic demo bundle; no live API calls.")
 
         for check in checks:
             icon = {
