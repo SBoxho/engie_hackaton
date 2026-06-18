@@ -15,7 +15,13 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.components.cards import message_box, metric_card, section_header, status_badge_html, viz_note
+from app.components.cards import (
+    message_box,
+    metric_card,
+    section_header,
+    status_badge_html,
+    viz_note,
+)
 from app.components.charts import dark_chart_layout
 from app.components.energy_weather import build_energy_weather_timeline
 from app.components.layout import apply_theme
@@ -23,7 +29,12 @@ from src.config import settings
 from src.data_processing.clean_energy_mix import clean_energy_mix
 from src.data_processing.features import add_time_features
 from src.data_processing.storage import PartitionedParquetStore
-from src.demo_mode import demo_ecowatt, demo_energy, demo_model_evaluation, demo_mood_artifact
+from src.demo_mode import (
+    demo_ecowatt,
+    demo_energy,
+    demo_model_evaluation,
+    demo_mood_artifact,
+)
 from src.data_sources.ecowatt import load_cached_ecowatt
 from src.data_sources.rte_eco2mix import load_cached_eco2mix
 from src.models.load_shift_simulator import (
@@ -38,7 +49,9 @@ from src.models.load_shift_simulator import (
     row_for_local_hour,
 )
 
-st.set_page_config(page_title="Shift the Load", page_icon=":material/tune:", layout="wide")
+st.set_page_config(
+    page_title="Flatten the Peak", page_icon=":material/emoji_events:", layout="wide"
+)
 apply_theme()
 
 
@@ -97,7 +110,10 @@ def load_local_energy() -> tuple[pd.DataFrame, str]:
             return recent.sort_values("timestamp"), "Local processed eco2mix snapshot"
         stored = store.read()
         if not stored.empty:
-            return stored.sort_values("timestamp").tail(7 * 24 * 4), "Local processed eco2mix snapshot (historical)"
+            return (
+                stored.sort_values("timestamp").tail(7 * 24 * 4),
+                "Local processed eco2mix snapshot (historical)",
+            )
     except (OSError, ValueError):
         pass
 
@@ -110,7 +126,9 @@ def load_local_energy() -> tuple[pd.DataFrame, str]:
 
 
 @st.cache_data(ttl=900, show_spinner=False)
-def load_local_ecowatt(start: pd.Timestamp, end: pd.Timestamp) -> tuple[pd.DataFrame, str]:
+def load_local_ecowatt(
+    start: pd.Timestamp, end: pd.Timestamp
+) -> tuple[pd.DataFrame, str]:
     if settings.is_demo_mode:
         return demo_ecowatt(start, end)
     try:
@@ -120,13 +138,21 @@ def load_local_ecowatt(start: pd.Timestamp, end: pd.Timestamp) -> tuple[pd.DataF
     if ecowatt.empty:
         return ecowatt, "EcoWatt unavailable offline"
     frame = ecowatt.loc[ecowatt["timestamp"].between(start, end)].copy()
-    return frame, "Cached EcoWatt snapshot" if not frame.empty else "EcoWatt unavailable for this window"
+    return frame, (
+        "Cached EcoWatt snapshot"
+        if not frame.empty
+        else "EcoWatt unavailable for this window"
+    )
 
 
 def build_grid_context() -> tuple[pd.DataFrame, str, str]:
     energy, energy_source = load_local_energy()
     if energy.empty:
-        return build_demo_timeline(timezone=settings.timezone), energy_source, "Demo assumptions"
+        return (
+            build_demo_timeline(timezone=settings.timezone),
+            energy_source,
+            "Demo assumptions",
+        )
 
     latest_ts = pd.to_datetime(energy["timestamp"], utc=True).max()
     start = latest_ts.floor("h") - pd.Timedelta(hours=1)
@@ -176,19 +202,47 @@ def _status_class(status: str) -> str:
     return lookup.get(status, "grey")
 
 
+def badge_for_score(score: ShiftScore) -> tuple[str, str, str]:
+    if score.total_points >= 100 or score.peak_avoidance_bonus >= 35:
+        return "Peak Hero", "green", "You moved meaningful load out of a stressed hour."
+    if score.total_points >= 45 or score.peak_avoidance_bonus > 0:
+        return (
+            "Grid Helper",
+            "blue",
+            "Good move: the intervention eased the daily pressure curve.",
+        )
+    if score.co2_delta_kg > 0:
+        return (
+            "Carbon Saver",
+            "blue",
+            "The grid was not very stressed, but the new timing is cleaner.",
+        )
+    return (
+        "Try Again",
+        "yellow",
+        "Look for a tense/watch hour and shift into a calmer or lower-carbon window.",
+    )
+
+
 def score_card(score: ShiftScore) -> None:
+    badge, badge_status, badge_detail = badge_for_score(score)
+    pressure_drop = max(
+        PRESSURE_POINTS.get(score.original_pressure, 0)
+        - PRESSURE_POINTS.get(score.shifted_pressure, 0),
+        0,
+    )
     st.markdown(
         f"""
         <div class="ep-explanation-card">
           <div class="ep-card-row">
-            <div class="ep-label">Shift score</div>
-            {status_badge_html("Educational", "blue")}
+            <div class="ep-label">Challenge score</div>
+            {status_badge_html(badge, badge_status)}
           </div>
-          <div class="ep-value">{score.total_points:,} points</div>
+          <div class="ep-value">{score.total_points:,} pts</div>
           <div class="ep-detail">
-            Grid relief: {score.grid_relief_points:,} points<br>
-            Low-carbon bonus: {score.low_carbon_bonus:,} points<br>
-            Peak-avoidance bonus: {score.peak_avoidance_bonus:,} points
+            {html.escape(badge_detail)}<br>
+            Pressure reduction: {pressure_drop} level(s)<br>
+            Grid relief: {score.grid_relief_points:,} · Low-carbon: {score.low_carbon_bonus:,} · Peak: {score.peak_avoidance_bonus:,}
           </div>
         </div>
         """,
@@ -196,15 +250,21 @@ def score_card(score: ShiftScore) -> None:
     )
 
 
-def timeline_chart(timeline: pd.DataFrame, original_hour: int, shifted_hour: int) -> go.Figure:
+def timeline_chart(
+    timeline: pd.DataFrame, original_hour: int, shifted_hour: int
+) -> go.Figure:
     frame = timeline.copy()
     frame["target"] = pd.to_datetime(frame["target"], utc=True, errors="coerce")
     frame = frame.dropna(subset=["target"]).sort_values("target")
     frame["local_hour"] = frame["target"].dt.tz_convert(settings.timezone).dt.hour
     if "hour_label" not in frame:
-        frame["hour_label"] = frame["target"].dt.tz_convert(settings.timezone).dt.strftime("%H:%M")
+        frame["hour_label"] = (
+            frame["target"].dt.tz_convert(settings.timezone).dt.strftime("%H:%M")
+        )
     frame["pressure_points"] = frame["status"].map(PRESSURE_POINTS).fillna(0)
-    frame["color"] = frame["status"].map(PRESSURE_COLORS).fillna(PRESSURE_COLORS["Unknown"])
+    frame["color"] = (
+        frame["status"].map(PRESSURE_COLORS).fillna(PRESSURE_COLORS["Unknown"])
+    )
     frame["selected"] = ""
     frame.loc[frame["local_hour"].eq(original_hour), "selected"] = "Before"
     frame.loc[frame["local_hour"].eq(shifted_hour), "selected"] = "After"
@@ -214,7 +274,9 @@ def timeline_chart(timeline: pd.DataFrame, original_hour: int, shifted_hour: int
         x=frame["hour_label"],
         y=frame["pressure_points"],
         marker_color=frame["color"],
-        customdata=frame[["status", "demand_signal_mw", "co2_intensity_g_per_kwh", "selected"]],
+        customdata=frame[
+            ["status", "demand_signal_mw", "co2_intensity_g_per_kwh", "selected"]
+        ],
         hovertemplate=(
             "<b>%{x}</b><br>Status: %{customdata[0]}<br>"
             "Demand: %{customdata[1]:,.0f} MW<br>CO2: %{customdata[2]:,.0f} g/kWh"
@@ -249,6 +311,61 @@ def timeline_chart(timeline: pd.DataFrame, original_hour: int, shifted_hour: int
     return fig
 
 
+def before_after_chart(score: ShiftScore) -> go.Figure:
+    before = PRESSURE_POINTS.get(score.original_pressure, 0)
+    after = PRESSURE_POINTS.get(score.shifted_pressure, 0)
+    fig = go.Figure()
+    fig.add_bar(
+        x=["Baseline", "Your shift"],
+        y=[before, after],
+        marker_color=[
+            PRESSURE_COLORS.get(score.original_pressure, "#9ca3af"),
+            PRESSURE_COLORS.get(score.shifted_pressure, "#9ca3af"),
+        ],
+        text=[score.original_pressure, score.shifted_pressure],
+        textposition="outside",
+        hovertemplate="%{x}<br>Pressure: %{y}<extra></extra>",
+    )
+    fig.update_layout(
+        **dark_chart_layout(
+            height=260,
+            margin=dict(l=10, r=10, t=20, b=10),
+            xaxis_title=None,
+            yaxis=dict(
+                title="Pressure level",
+                tickmode="array",
+                tickvals=[0, 1, 2, 3],
+                ticktext=["?", "OK", "Watch", "Tense"],
+                range=[0, 3.7],
+            ),
+            showlegend=False,
+        )
+    )
+    return fig
+
+
+def outcome_message(score: ShiftScore) -> tuple[str, str, str]:
+    badge, _, _ = badge_for_score(score)
+    pressure_drop = max(
+        PRESSURE_POINTS.get(score.original_pressure, 0)
+        - PRESSURE_POINTS.get(score.shifted_pressure, 0),
+        0,
+    )
+    if pressure_drop > 0:
+        body = f"{badge}: you moved {score.energy_mwh:.2f} MWh from {score.original_pressure.lower()} to {score.shifted_pressure.lower()}, cutting the visible pressure by {pressure_drop} level(s)."
+        kind = "info"
+    else:
+        body = f"{badge}: this move shifts {score.energy_mwh:.2f} MWh, but it does not reduce the pressure level. Try moving out of a Watch or Tense hour."
+        kind = "warning"
+    if score.co2_delta_kg > 0:
+        body += f" The simplified carbon signal improves by about {score.co2_delta_kg:.0f} kg CO2."
+    elif score.co2_delta_kg < 0:
+        body += " The shifted hour appears more carbon-intensive, so the carbon effect is negative in this model."
+    else:
+        body += " Carbon impact is neutral or unavailable with the current inputs."
+    return "Instant verdict", body, kind
+
+
 def render_action_assumption(action: ShiftAction) -> None:
     label = "Placeholder" if action.placeholder else "Fallback"
     status = "yellow" if action.placeholder else "blue"
@@ -276,38 +393,52 @@ assumption_config = load_assumption_config()
 timeline, grid_source, ecowatt_source = build_grid_context()
 
 section_header(
-    "Shift the Load",
-    "Move flexible use to an easier hour",
-    "An educational simulator for seeing how timing, demand pressure, CO2 intensity, and EcoWatt context can change the energy-weather score.",
+    "Can you flatten the peak?",
+    "A 60-second load-shifting challenge",
+    "Pick one flexible action, move it away from the daily peak, and see whether your choice lowers demand pressure and carbon intensity in the available grid signal.",
 )
 st.caption(settings.app_mode_label)
 message_box(
-    "Educational simulator",
-    "This is a playful approximation, not an exact real-world savings calculator. Appliance values are transparent demo assumptions unless replaced by ADEME ElecDom data.",
+    "Educational challenge — not an operational dispatch tool",
+    "Scores are designed for learning in a live demo. Appliance energy values are visible assumptions, and optional forecast, EcoWatt, or CO2 signals gracefully fall back to demo or unavailable states.",
     kind="info",
 )
 
 control, explainer = st.columns([1.05, 1])
 with control:
-    st.subheader("Choose your move")
+    st.subheader("Make your move")
     action_labels = {action.label: action_id for action_id, action in actions.items()}
     selected_label = st.selectbox(
-        "Appliance or action",
+        "1) Flexible action",
         list(action_labels),
-        index=list(action_labels).index("Dishwasher") if "Dishwasher" in action_labels else 0,
+        index=(
+            list(action_labels).index("Dishwasher")
+            if "Dishwasher" in action_labels
+            else 0
+        ),
+        help="One simple choice keeps the demo fast; detailed assumptions remain visible below.",
     )
     selected_action = actions[action_labels[selected_label]]
-    households = int(
-        st.number_input(
-            "Households participating",
-            min_value=1,
-            max_value=500_000,
-            value=1_000,
-            step=100,
-        )
+    ambition = st.radio(
+        "2) Participation level",
+        ["Neighbourhood · 1,000 homes", "Town · 10,000 homes", "City · 50,000 homes"],
+        horizontal=False,
     )
-    original_hour = st.slider("Original hour", min_value=0, max_value=23, value=19, format="%02d:00")
-    shifted_hour = st.slider("Shifted hour", min_value=0, max_value=23, value=3, format="%02d:00")
+    households = {
+        "Neighbourhood · 1,000 homes": 1_000,
+        "Town · 10,000 homes": 10_000,
+        "City · 50,000 homes": 50_000,
+    }[ambition]
+    original_hour = st.slider(
+        "3) Peak hour to flatten", min_value=0, max_value=23, value=19, format="%02d:00"
+    )
+    shifted_hour = st.select_slider(
+        "4) Move it to",
+        options=list(range(24)),
+        value=3,
+        format_func=_format_hour,
+        help="Try a night valley or low-carbon daytime window.",
+    )
 
 with explainer:
     render_action_assumption(selected_action)
@@ -316,49 +447,84 @@ with explainer:
 original_row = row_for_local_hour(timeline, original_hour, timezone=settings.timezone)
 shifted_row = row_for_local_hour(timeline, shifted_hour, timezone=settings.timezone)
 score = compute_shift_score(selected_action, households, original_row, shifted_row)
+pressure_drop = max(
+    PRESSURE_POINTS.get(score.original_pressure, 0)
+    - PRESSURE_POINTS.get(score.shifted_pressure, 0),
+    0,
+)
 
-section_header("Result", "Before and after")
+section_header(
+    "Scoreboard",
+    "Before vs after outcomes",
+    "Success should be obvious at a glance: lower peak pressure, a clear point score, and a plain-language verdict.",
+)
 metric_cols = st.columns(4)
 with metric_cols[0]:
-    metric_card("Approx shifted energy", f"{score.energy_mwh:.2f} MWh", "Event energy across participating households.", icon="MWh")
+    metric_card(
+        "Peak reduction",
+        f"{score.energy_mwh:.2f} MWh",
+        "Flexible energy removed from the selected baseline hour.",
+        icon="Peak",
+    )
 with metric_cols[1]:
-    metric_card("Grid relief points", f"{score.grid_relief_points:,}", "More points when a move leaves a high-pressure hour.", icon="Grid")
+    metric_card(
+        "Pressure reduction",
+        f"{pressure_drop} level(s)",
+        f"{score.original_pressure} → {score.shifted_pressure}",
+        icon="Grid",
+    )
 with metric_cols[2]:
-    metric_card("Low-carbon bonus", f"{score.low_carbon_bonus:,}", "Based on lower CO2 intensity at the shifted hour.", icon="CO2")
+    co2_value = (
+        f"{score.co2_delta_kg:.0f} kg" if score.co2_delta_kg else "Unavailable/neutral"
+    )
+    metric_card(
+        "Carbon effect",
+        co2_value,
+        "Positive means the shifted hour has lower CO2 intensity.",
+        icon="CO2",
+    )
 with metric_cols[3]:
-    metric_card("Peak bonus", f"{score.peak_avoidance_bonus:,}", "Unlocked when the original hour is tense or watch-level.", icon="Peak")
+    badge, badge_status, _ = badge_for_score(score)
+    metric_card(
+        "Badge",
+        badge,
+        f"{score.total_points:,} challenge points",
+        icon="Award",
+        status=badge_status,
+    )
 
 before, after, total = st.columns([1, 1, 0.9])
 with before:
-    comparison_card(_format_hour(original_hour), original_row, role="Before")
+    comparison_card(_format_hour(original_hour), original_row, role="Baseline")
 with after:
-    comparison_card(_format_hour(shifted_hour), shifted_row, role="After")
+    comparison_card(
+        _format_hour(shifted_hour), shifted_row, role="Your adjusted scenario"
+    )
 with total:
     score_card(score)
 
-if score.original_pressure in {"Watch", "Tense"}:
-    message = f"You helped avoid about {score.energy_mwh:.2f} MWh during a {score.original_pressure.lower()} hour."
-else:
-    message = f"You moved about {score.energy_mwh:.2f} MWh to compare a different hour."
-if score.co2_delta_kg > 0:
-    message = f"{message} The timing also avoids roughly {score.co2_delta_kg:.0f} kg CO2 in this simplified model."
-elif score.co2_delta_kg < 0:
-    message = f"{message} The shifted hour is not lower-carbon in this simplified model, so no low-carbon bonus is added."
-message_box("Nice shift", message, kind="info")
+verdict_title, verdict_body, verdict_kind = outcome_message(score)
+message_box(verdict_title, verdict_body, kind=verdict_kind)
 
-section_header(
-    "Mini timeline",
-    "24-hour pressure map",
-    "Bars show the educational pressure score for each hour. Before and after markers show your move.",
-)
-viz_note(
-    "Before and after pressure",
-    "The bar labels and markers show whether the selected appliance moves away from a watch or tense hour and toward a lower-pressure window.",
-    source="Simulator context",
-)
-st.plotly_chart(timeline_chart(timeline, original_hour, shifted_hour), width="stretch")
+chart_cols = st.columns([0.8, 1.2])
+with chart_cols[0]:
+    viz_note(
+        "Challenge snapshot",
+        "Side-by-side pressure levels make success or failure instant.",
+        source="Educational score",
+    )
+    st.plotly_chart(before_after_chart(score), width="stretch")
+with chart_cols[1]:
+    viz_note(
+        "24-hour pressure map",
+        "Bars show the educational pressure score for each hour. Markers show your baseline and shifted timing.",
+        source="Simulator context",
+    )
+    st.plotly_chart(
+        timeline_chart(timeline, original_hour, shifted_hour), width="stretch"
+    )
 
-with st.expander("Transparent assumptions and scoring", expanded=False):
+with st.expander("Transparent educational assumptions and scoring", expanded=False):
     st.write(assumption_config["disclaimer"])
     for note in assumption_config.get("source_notes", []):
         st.caption(note)
@@ -380,9 +546,9 @@ with st.expander("Transparent assumptions and scoring", expanded=False):
         hide_index=True,
     )
     st.write(
-        "Scoring combines approximate shifted MWh, whether the move leaves a watch/tense hour, "
-        "and whether the shifted hour has lower CO2 intensity. Points are game mechanics for learning, "
-        "not a settlement, billing, or verified carbon accounting method."
+        "Scoring combines approximate shifted MWh, pressure reduction between the baseline and shifted hours, "
+        "and any lower-carbon timing signal. Points and badges are game mechanics for learning, not billing, dispatch, "
+        "settlement, comfort, or verified carbon accounting."
     )
 
 st.link_button("Back to Energy Pulse France", "/")
