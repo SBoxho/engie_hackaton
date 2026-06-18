@@ -38,6 +38,7 @@ from app.components.energy_weather import (
 from app.components.layout import apply_theme
 from app.components.mood_explanation import render_mood_explanation
 from app.components.weather_context import render_weather_context
+from src.artifact_contract import demo_blocking_message, validate_demo_bundle
 from src.config import settings
 from src.data_processing.clean_energy_mix import clean_energy_mix
 from src.data_processing.features import add_time_features
@@ -58,6 +59,15 @@ from src.models.mood_calibration import FIXED_THRESHOLDS, classify_mood
 
 st.set_page_config(page_title="Energy Pulse France", page_icon=":zap:", layout="wide")
 apply_theme()
+
+if settings.is_demo_mode:
+    demo_checks = validate_demo_bundle(log=True)
+    blocking = demo_blocking_message(demo_checks)
+    if blocking:
+        st.error("Required demo artifacts are not ready.")
+        st.caption(blocking)
+        st.code("python -m scripts.export_demo_bundle")
+        st.stop()
 
 
 @st.cache_data(ttl=900, show_spinner=False)
@@ -98,7 +108,10 @@ def load_weather(start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
 def load_ecowatt(start: pd.Timestamp, end: pd.Timestamp) -> tuple[pd.DataFrame, str]:
     if settings.is_demo_mode and not external_api_enabled():
         return demo_ecowatt(start, end)
-    return load_ecowatt_window(start, end, timezone_name=settings.timezone)
+    try:
+        return load_ecowatt_window(start, end, timezone_name=settings.timezone)
+    except (OSError, ValueError) as exc:
+        return pd.DataFrame(), f"EcoWatt unavailable: {exc}"
 
 
 @st.cache_data(ttl=900, show_spinner=False)
@@ -108,7 +121,11 @@ def load_model_evaluation() -> dict[str, Any]:
     path = settings.processed_dir / "demand_model" / "evaluation.json"
     if not path.exists():
         return {}
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
 def mood_artifact() -> tuple[dict[str, Any], str]:
@@ -117,7 +134,12 @@ def mood_artifact() -> tuple[dict[str, Any], str]:
         if artifact:
             return artifact, "demo calibration"
     if settings.mood_artifact_path.exists():
-        return json.loads(settings.mood_artifact_path.read_text(encoding="utf-8")), "calibrated"
+        try:
+            payload = json.loads(settings.mood_artifact_path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                return payload, "calibrated"
+        except (OSError, ValueError, json.JSONDecodeError):
+            pass
     return {
         "timezone": settings.timezone,
         "min_sample": 1,
@@ -444,6 +466,8 @@ st.markdown(
 status_badge(source_status, "blue")
 status_badge(settings.app_mode_label, mode_badge_color())
 status_badge(ecowatt_source_status, "blue" if not ecowatt.empty else "grey")
+if settings.is_demo_mode and ecowatt.empty:
+    message_box("EcoWatt status", ecowatt_source_status, kind="warning")
 source_badges(
     [
         ("RTE / ODRÉ", "eco2mix + EcoWatt"),

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-import json
+import logging
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
+from src.artifact_contract import read_json_object
 from src.config import settings
+
+LOGGER = logging.getLogger(__name__)
 
 
 def external_api_enabled() -> bool:
@@ -20,10 +23,12 @@ def mode_badge_color() -> str:
 
 def read_demo_parquet(path: Path) -> pd.DataFrame:
     if not path.exists():
+        LOGGER.warning("Demo parquet artifact is missing: %s", path)
         return pd.DataFrame()
     try:
         frame = pd.read_parquet(path)
-    except (OSError, ValueError):
+    except (OSError, ValueError, ImportError) as exc:
+        LOGGER.warning("Demo parquet artifact is unreadable: %s (%s)", path, exc)
         return pd.DataFrame()
     if "timestamp" in frame:
         frame["timestamp"] = pd.to_datetime(frame["timestamp"], utc=True, errors="coerce")
@@ -32,13 +37,11 @@ def read_demo_parquet(path: Path) -> pd.DataFrame:
 
 
 def read_demo_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
+    payload, error = read_json_object(path)
+    if error:
+        LOGGER.warning("Demo JSON artifact unavailable: %s (%s)", path, error)
         return {}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError, json.JSONDecodeError):
-        return {}
-    return payload if isinstance(payload, dict) else {}
+    return payload
 
 
 def demo_energy() -> pd.DataFrame:
@@ -54,8 +57,16 @@ def demo_weather(start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
 
 def demo_ecowatt(start: pd.Timestamp, end: pd.Timestamp) -> tuple[pd.DataFrame, str]:
     ecowatt = read_demo_parquet(settings.demo_ecowatt_path)
-    if ecowatt.empty or "timestamp" not in ecowatt:
-        return pd.DataFrame(), "Demo EcoWatt sample unavailable"
+    if ecowatt.empty:
+        message = (
+            "Demo EcoWatt artifact is present but contains 0 rows"
+            if settings.demo_ecowatt_path.exists()
+            else "Demo EcoWatt sample unavailable"
+        )
+        return pd.DataFrame(), message
+    if "timestamp" not in ecowatt:
+        LOGGER.warning("Demo EcoWatt artifact has no timestamp column: %s", settings.demo_ecowatt_path)
+        return pd.DataFrame(), "Demo EcoWatt artifact is malformed"
     frame = ecowatt.loc[ecowatt["timestamp"].between(start, end)].copy()
     if frame.empty:
         return frame, "Demo EcoWatt sample unavailable for this window"

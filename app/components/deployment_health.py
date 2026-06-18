@@ -8,6 +8,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from src.artifact_contract import ArtifactCheck, validate_demo_bundle
 from src.config import settings
 from src.demo_mode import external_api_enabled
 
@@ -17,16 +18,6 @@ class HealthCheck:
     label: str
     status: str
     detail: str
-
-
-def _has_rows(path: Path) -> tuple[bool, str]:
-    if not path.exists():
-        return False, "missing"
-    try:
-        rows = len(pd.read_parquet(path))
-    except (OSError, ValueError):
-        return False, "unreadable"
-    return rows > 0, f"{rows:,} rows"
 
 
 def _has_json(path: Path) -> tuple[bool, str]:
@@ -42,52 +33,39 @@ def _has_json(path: Path) -> tuple[bool, str]:
     return False, "invalid"
 
 
-def _artifact_status(ok: bool, required: bool) -> str:
-    if ok:
-        return "ok"
-    return "missing" if required else "optional"
+def _contract_to_health(check: ArtifactCheck) -> HealthCheck:
+    return HealthCheck(check.spec.label, check.health_status, check.detail)
 
 
 def artifact_checks() -> list[HealthCheck]:
-    """Return deployment artifact checks without using local-only paths."""
+    """Return deployment artifact checks using the canonical readiness contract."""
     if settings.is_demo_mode:
-        parquet_checks = [
-            ("Demo energy", settings.demo_energy_path, True),
-            ("Demo weather", settings.demo_weather_path, False),
-            ("Demo EcoWatt", settings.demo_ecowatt_path, False),
-        ]
-        json_checks = [
-            ("Demo manifest", settings.demo_dir / "manifest.json", True),
-            ("Quality report", settings.demo_quality_path, True),
-            ("Demand model evaluation", settings.demo_model_evaluation_path, True),
-            ("Model forecast", settings.demo_model_forecast_path, False),
-            ("Baseline backtest", settings.demo_baseline_artifact_path, True),
-            ("Mood calibration", settings.demo_mood_artifact_path, True),
-        ]
-    else:
-        parquet_checks = [
-            ("Processed energy store", settings.energy_store_dir, True),
-            ("Weather features", settings.weather_features_path, False),
-        ]
-        json_checks = [
-            ("Baseline backtest", settings.baseline_artifact_path, False),
-            ("Mood calibration", settings.mood_artifact_path, False),
-            ("Demand model evaluation", settings.processed_dir / "demand_model" / "evaluation.json", False),
-        ]
+        return [_contract_to_health(check) for check in validate_demo_bundle(log=True)]
 
     checks: list[HealthCheck] = []
-    for label, path, required in parquet_checks:
-        if path.is_dir():
-            files = list(path.rglob("*.parquet"))
-            ok = bool(files)
-            detail = f"{len(files):,} parquet partitions" if ok else "missing"
-        else:
-            ok, detail = _has_rows(path)
-        checks.append(HealthCheck(label, _artifact_status(ok, required), detail))
-
-    for label, path, required in json_checks:
+    files = list(settings.energy_store_dir.rglob("*.parquet")) if settings.energy_store_dir.exists() else []
+    checks.append(
+        HealthCheck(
+            "Processed energy store",
+            "ok" if files else "missing",
+            f"{len(files):,} parquet partitions" if files else "missing",
+        )
+    )
+    if settings.weather_features_path.exists():
+        try:
+            rows = len(pd.read_parquet(settings.weather_features_path))
+            checks.append(HealthCheck("Weather features", "ok" if rows else "empty", f"{rows:,} rows"))
+        except (OSError, ValueError, ImportError) as exc:
+            checks.append(HealthCheck("Weather features", "unreadable", str(exc)))
+    else:
+        checks.append(HealthCheck("Weather features", "optional", "missing"))
+    for label, path in [
+        ("Baseline backtest", settings.baseline_artifact_path),
+        ("Mood calibration", settings.mood_artifact_path),
+        ("Demand model evaluation", settings.processed_dir / "demand_model" / "evaluation.json"),
+    ]:
         ok, detail = _has_json(path)
-        checks.append(HealthCheck(label, _artifact_status(ok, required), detail))
+        checks.append(HealthCheck(label, "ok" if ok else "optional", detail))
     return checks
 
 
@@ -115,14 +93,14 @@ def runtime_checks(
     model_payload: dict[str, Any],
     calibration_status: str,
 ) -> list[HealthCheck]:
-    weather_detail = "available" if not weather.empty else "not available for this window"
-    ecowatt_detail = "available" if not ecowatt.empty else "not available for this window"
+    weather_detail = "available" if not weather.empty else "optional artifact missing, empty, or outside this window"
+    ecowatt_detail = "available" if not ecowatt.empty else "optional EcoWatt artifact missing, empty, or outside this window"
     model_detail = "available" if model_payload else "not available"
     return [
         mode_check(),
         data_check(data, source_status),
         HealthCheck("Weather context", "ok" if not weather.empty else "optional", weather_detail),
-        HealthCheck("EcoWatt signal", "ok" if not ecowatt.empty else "optional", ecowatt_detail),
+        HealthCheck("EcoWatt signal", "ok" if not ecowatt.empty else "empty", ecowatt_detail),
         HealthCheck("Model evaluation", "ok" if model_payload else "optional", model_detail),
         HealthCheck("Mood thresholds", "ok", calibration_status),
         *artifact_checks(),
@@ -147,14 +125,14 @@ def render_deployment_health(
         calibration_status=calibration_status,
     )
     failures = [check for check in checks if check.status == "missing"]
-    warnings = [check for check in checks if check.status == "optional"]
+    warnings = [check for check in checks if check.status in {"optional", "empty", "stale", "invalid", "unreadable"}]
 
     with st.sidebar:
         st.markdown("### Deployment health")
         if failures:
             st.error(f"{len(failures)} required check(s) need attention.")
         elif warnings:
-            st.warning(f"Ready with {len(warnings)} optional artifact(s) unavailable.")
+            st.warning(f"Ready with {len(warnings)} artifact warning(s).")
         else:
             st.success("Ready for public demo.")
 
@@ -165,5 +143,9 @@ def render_deployment_health(
                 "live": "[live]",
                 "optional": "[optional]",
                 "missing": "[missing]",
+                "empty": "[empty]",
+                "stale": "[stale]",
+                "invalid": "[invalid]",
+                "unreadable": "[unreadable]",
             }.get(check.status, "[info]")
             st.caption(f"{icon} **{check.label}** - {check.detail}")
