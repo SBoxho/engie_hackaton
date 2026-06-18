@@ -486,6 +486,12 @@ if settings.is_demo_mode:
     )
 
 section_header(
+    "Command centre narrative",
+    "Observe, understand, act",
+    "The homepage keeps the strategic hackathon story intact while making the live grid, forecast, drivers, and simulator visible in one scroll.",
+)
+
+section_header(
     "Now",
     "Current grid state",
     "The first screen answers the judge's key question: what is happening on the French electricity system right now?",
@@ -558,6 +564,13 @@ with driver_cols[3]:
         "Carbon signal stays explicit",
         f"The latest source intensity is {co2_intensity:,.0f} g/kWh, shown separately from demand.",
     )
+
+section_header(
+    "Why it matters",
+    "From grid tension to citizen action",
+    "The demo links national electricity signals to choices that a household, campus, or city can understand quickly.",
+)
+render_why_it_matters()
 
 section_header(
     "Act",
