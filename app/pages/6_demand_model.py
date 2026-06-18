@@ -10,6 +10,7 @@ import streamlit as st
 
 from app.components.cards import explanation_card, horizon_forecast_card, message_box, section_header, viz_note
 from app.components.layout import apply_theme
+from src.artifact_contract import ArtifactSpec, validate_artifact
 from src.config import settings
 
 
@@ -30,7 +31,10 @@ EXPLANATION_FALLBACK = (
 
 @st.cache_data(show_spinner=False)
 def load_evaluation(path: str) -> dict:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("artifact root must be a JSON object")
+    return payload
 
 
 def format_mw(value: float | int | None) -> str:
@@ -310,8 +314,18 @@ st.caption(
 
 default_evaluation = settings.demo_model_evaluation_path if settings.is_demo_mode else DEFAULT_EVALUATION
 artifact_path = st.text_input("Evaluation artifact", str(default_evaluation))
+check = validate_artifact(
+    ArtifactSpec(
+        "demand_evaluation",
+        "Demand model evaluation",
+        Path(artifact_path),
+        "json",
+        True,
+        required_keys=("predictions", "metrics"),
+    )
+)
 try:
-    payload = load_evaluation(artifact_path)
+    payload = load_evaluation(artifact_path) if check.ok else {}
 except (OSError, ValueError, json.JSONDecodeError) as exc:
     if settings.is_demo_mode:
         st.info("The bundled demand-model demo artifact is not available.")
@@ -324,6 +338,9 @@ except (OSError, ValueError, json.JSONDecodeError) as exc:
             "python -m scripts.evaluate_demand_model"
         )
     st.caption(f"Artifact unavailable: {exc}")
+    st.stop()
+if not check.ok:
+    st.warning(f"Demand-model artifact is {check.status}: {check.detail}")
     st.stop()
 
 predictions = pd.DataFrame(payload.get("predictions", []))

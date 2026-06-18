@@ -19,10 +19,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from src.artifact_contract import validate_demo_bundle
 from src.config import settings
 from src.data_processing.quality import run_quality_checks
 from src.data_processing.storage import PartitionedParquetStore
-from src.data_sources.ecowatt import load_cached_ecowatt
+from src.data_sources.ecowatt import EcoWattError, load_cached_ecowatt
 
 
 MIN_DEMO_DAYS = 7
@@ -143,7 +144,7 @@ def _export_weather(start: pd.Timestamp, end: pd.Timestamp, output: Path) -> int
 def _export_ecowatt(start: pd.Timestamp, end: pd.Timestamp, output: Path) -> int:
     try:
         ecowatt = load_cached_ecowatt(timezone_name=settings.timezone)
-    except (FileNotFoundError, OSError, ValueError):
+    except (EcoWattError, FileNotFoundError, OSError, ValueError):
         ecowatt = pd.DataFrame(columns=EMPTY_ECOWATT_COLUMNS)
     if not ecowatt.empty and "timestamp" in ecowatt:
         ecowatt["timestamp"] = pd.to_datetime(ecowatt["timestamp"], utc=True, errors="coerce")
@@ -280,6 +281,16 @@ def main() -> int:
         },
     }
     _write_json(manifest, output / "manifest.json")
+
+    checks = validate_demo_bundle(output, log=True)
+    blockers = [check for check in checks if check.blocks_demo]
+    if blockers:
+        details = "; ".join(f"{check.spec.label}: {check.detail}" for check in blockers)
+        raise RuntimeError(f"Exported demo bundle failed readiness validation: {details}")
+    warnings = [check for check in checks if not check.ok]
+    if warnings:
+        print("Demo bundle validation warnings: " + "; ".join(f"{check.spec.label}={check.status}" for check in warnings))
+
     print(
         f"Exported demo bundle to {output} with {len(energy):,} energy rows "
         f"from {start} to {end}."

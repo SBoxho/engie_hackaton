@@ -10,6 +10,7 @@ import streamlit as st
 
 from app.components.cards import viz_note
 from app.components.layout import apply_theme
+from src.artifact_contract import ArtifactSpec, validate_artifact
 from src.config import settings
 
 
@@ -24,7 +25,10 @@ LABELS = {
 
 @st.cache_data(show_spinner=False)
 def load_artifact(path: str) -> dict:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("artifact root must be a JSON object")
+    return payload
 
 
 apply_theme()
@@ -38,11 +42,24 @@ st.caption(
 
 default_artifact = settings.demo_baseline_artifact_path if settings.is_demo_mode else DEFAULT_ARTIFACT
 artifact_path = st.text_input("Backtest artifact", str(default_artifact))
+check = validate_artifact(
+    ArtifactSpec(
+        "baseline",
+        "Baseline backtest",
+        Path(artifact_path),
+        "json",
+        True,
+        required_keys=("predictions", "metrics"),
+    )
+)
 try:
-    payload = load_artifact(artifact_path)
+    payload = load_artifact(artifact_path) if check.ok else {}
 except (OSError, ValueError, json.JSONDecodeError) as exc:
     st.info("Run `python -m scripts.backtest_baselines` first.")
     st.caption(f"Artifact unavailable: {exc}")
+    st.stop()
+if not check.ok:
+    st.warning(f"Baseline artifact is {check.status}: {check.detail}")
     st.stop()
 
 predictions = pd.DataFrame(payload.get("predictions", []))
