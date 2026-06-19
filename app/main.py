@@ -10,17 +10,20 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.components.layout import apply_theme
+from app.i18n import init_locale, nav_label, set_html_lang
 
 st.set_page_config(page_title="Energy Pulse France", page_icon=":zap:", layout="wide")
 apply_theme()
+locale = init_locale()
+set_html_lang(locale)
 
-now_page = st.Page("pages/now.py", title="NOW", url_path="", default=True)
-next_page = st.Page("pages/next_48h.py", title="NEXT 48H", url_path="next-48h")
-what_if_page = st.Page("pages/what_if.py", title="WHAT IF?", url_path="what-if")
+now_page = st.Page("pages/now.py", title=nav_label("now", locale=locale), url_path="", default=True)
+next_page = st.Page("pages/next_48h.py", title=nav_label("next_48h", locale=locale), url_path="next-48h")
+what_if_page = st.Page("pages/what_if.py", title=nav_label("what_if", locale=locale), url_path="what-if")
 
 technical_lab_page = st.Page(
     "pages/technical_lab.py",
-    title="Technical lab",
+    title=nav_label("technical_lab", locale=locale),
     url_path="technical-lab",
     visibility="hidden",
 )
@@ -43,6 +46,6 @@ current_page = st.navigation(
 )
 
 with st.sidebar:
-    st.page_link(technical_lab_page, label="Technical lab", icon=":material/engineering:")
+    st.page_link(technical_lab_page, label=nav_label("technical_lab", locale=locale), icon=":material/engineering:")
 
 current_page.run()

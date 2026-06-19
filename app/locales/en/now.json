@@ -1,0 +1,243 @@
+{
+  "about": {
+    "body_1": "This hackathon decision-support prototype is built for public electricity awareness. It combines RTE/ODRE electricity observations, EcoWatt context, weather features, and transparent fallbacks to explain demand, generation, exchange, and pressure separately.",
+    "body_2": "Limitations: this is not an RTE operational forecast, tariff signal, dispatch tool, or verified carbon accounting method. Historical sample data is separated from live operational context.",
+    "title": "About the project"
+  },
+  "carbon": {
+    "detail": "Displayed separately; not used in official EcoWatt or modelled balance status.",
+    "label": "Carbon context"
+  },
+  "demand_difference": {
+    "above_usual": "{percent} above usual",
+    "below_usual": "{percent} below usual",
+    "close_to_usual": "Close to usual",
+    "unavailable": "Demand versus usual unavailable"
+  },
+  "drivers": {
+    "demand_detail": "France is using {demand}; usual for this context is {usual}.",
+    "demand_icon": "Demand",
+    "demand_label": "Driver",
+    "generation_detail": {
+      "current_state": "Observed generation is {generation}. {flow}",
+      "modelled": "Generation and exchange context is {margin} versus demand. {flow}",
+      "unavailable": "Generation and exchange context is unavailable."
+    },
+    "generation_icon": "Gen",
+    "generation_label": "Generation and exchange",
+    "section_kicker": "Drivers",
+    "section_title": "What is driving the signal?",
+    "terms_html": "Terms: {usual_demand} and {local_generation}.",
+    "weather_icon": "Weather"
+  },
+  "flow": {
+    "net_exchange_near_zero": "Net exchange near zero",
+    "net_exchange_unavailable": "Net exchange unavailable",
+    "net_exports": "Net exports {value}",
+    "net_imports": "Net imports {value}"
+  },
+  "forecast": {
+    "aria": "Next 12 hours",
+    "detail": "{status}. Forecast route: {source}. This context is modelled and is not an official warning.",
+    "label": "Selected-hour forecast context",
+    "section_copy": "Pick an hour to update the selected-hour forecast context.",
+    "section_kicker": "Next 12 Hours",
+    "section_title": "Selectable demand ribbon",
+    "title": "{timestamp}: {demand}",
+    "unavailable_body": "No forecast point is available for the selected hour.",
+    "unavailable_info": "Next-12-hours forecast context is unavailable.",
+    "unavailable_label": "Selected hour",
+    "unavailable_title": "Selected-hour forecast unavailable"
+  },
+  "freshness": {
+    "delayed_live_data": "Delayed live data",
+    "fresh": "Fresh",
+    "fresh_live_data": "Fresh live data",
+    "historical_replay": "Historical replay",
+    "historical_sample_at": "Historical sample {timestamp}",
+    "last_known_good_fallback": "Last-known-good fallback",
+    "source_unavailable": "Source unavailable",
+    "stale": "Stale data",
+    "unavailable": "Freshness unavailable",
+    "updated_at": "Updated {timestamp}"
+  },
+  "generation_mix": {
+    "demand_marker": "Demand",
+    "section_kicker": "Generation Mix",
+    "section_title": "Generation, demand, exchange, and carbon",
+    "source": "RTE eCO2mix and typed current-state API",
+    "stack_label": "Generation",
+    "viz_detail": "Major sources are labelled directly. Small sources are grouped into Other when the chart would become cluttered.",
+    "viz_title": "Current generation mix"
+  },
+  "hero": {
+    "aria": "Plain-language current electricity summary",
+    "body": "{unusual} ({difference} versus usual). {driver}",
+    "eyebrow": "What is happening now?",
+    "last_update": "Last update",
+    "near_term_direction": "Near-term direction",
+    "title": "{demand} national demand"
+  },
+  "main_driver": {
+    "demand": "The clearest driver is demand compared with usual.",
+    "no_single_driver": "No single driver is dominant from the available sources.",
+    "residual_load": "Demand left after wind and solar is the main modelled driver.",
+    "unavailability": "Announced generation unavailability is the main modelled driver.",
+    "weather": "Weather context: {headline}."
+  },
+  "near_term": {
+    "falling": "Falling over the next few hours ({delta})",
+    "rising": "Rising over the next few hours ({delta})",
+    "steady": "Broadly steady over the next few hours",
+    "unavailable": "Near-term direction unavailable"
+  },
+  "notices": {
+    "delayed_source_data": {
+      "body": "The current-state API marks the latest source record as delayed.",
+      "title": "Delayed source data"
+    },
+    "kind": {
+      "empty": "Empty",
+      "error": "Error",
+      "fallback": "Fallback",
+      "loading": "Loading",
+      "partial": "Partial data",
+      "stale": "Stale data"
+    },
+    "optional_source_unavailable": {
+      "body": "One or more optional source fields are unavailable.",
+      "title": "Optional source unavailable"
+    },
+    "stale_data": {
+      "body": "The latest typed contract marks this data as stale.",
+      "title": "Stale data"
+    },
+    "typed_twin_contract_unavailable": {
+      "body": "The page is using the legacy public context while the typed response is unavailable.",
+      "title": "Typed twin contract unavailable"
+    },
+    "using_last_known_good": {
+      "body": "Live refresh did not provide a fresh complete source bundle.",
+      "title": "Using last-known-good data"
+    }
+  },
+  "official": {
+    "detail_available": "Official national EcoWatt signal.",
+    "detail_unavailable": "No official EcoWatt signal is available.",
+    "icon": "Eco",
+    "label": "Official signal",
+    "title_unavailable": "EcoWatt unavailable"
+  },
+  "provenance": {
+    "current_demand": "Current demand",
+    "map_geometry": "Map geometry",
+    "mode": "Mode",
+    "national_electricity": "National electricity",
+    "regional_electricity": "Regional electricity",
+    "title": "Data provenance"
+  },
+  "regions": {
+    "connected_grid_note": "Regional context is not an independent shortage warning. Regional values are connected-grid context only; local generation is not a measure of electricity available only inside the region, and low local generation does not indicate a regional electricity shortage.",
+    "demand_detail": "{context}",
+    "demand_icon": "Demand",
+    "demand_label": "Regional demand",
+    "flow_balance": "Physical balance {value}",
+    "flow_detail": "Imports and exports are physical flow context when available.",
+    "flow_icon": "Flow",
+    "flow_label": "Physical flow context",
+    "flow_net": "Net flow {value}",
+    "generation_detail": "Generation measured in the region, within the connected French grid.",
+    "generation_icon": "Gen",
+    "generation_label": "Local generation",
+    "map_colorbar": "Versus usual",
+    "map_demand_anomaly": "Demand anomaly",
+    "map_difference": "Difference",
+    "map_freshness": "Freshness",
+    "map_observed_demand": "Observed demand",
+    "map_reason": "Reason",
+    "map_source": "Source",
+    "map_unavailable": "Unavailable",
+    "map_unavailable_name": "Unavailable regional data",
+    "map_available_name": "Available regional anomaly",
+    "map_usual_demand": "Usual demand",
+    "note_unavailable": "Regional context is not an independent shortage warning; unavailable fields stay labelled unavailable.",
+    "section_copy": "Map color compares each region with its usual demand for a comparable context. Grey regions are unavailable, not zero.",
+    "section_kicker": "Regions",
+    "section_title": "Demand versus usual",
+    "selector_help": "Select a region to update the regional contribution panel.",
+    "selector_label": "Selected region",
+    "selected_label": "Selected-region context"
+  },
+  "routes": {
+    "local_nowcast_model": "Local nowcast model",
+    "recent_comparable_hour_fallback": "Recent comparable-hour fallback",
+    "recent_pattern_nowcast": "Recent-pattern nowcast",
+    "rte_forecast": "RTE forecast",
+    "unsupported_horizon_fallback": "Unsupported horizon fallback",
+    "validated_model_fallback": "Validated model fallback"
+  },
+  "source_quality": {
+    "delayed": "Delayed",
+    "historical_replay": "Historical replay",
+    "last_known_good": "Last-known-good",
+    "missing_region_record": "Missing region record",
+    "unavailable": "Unavailable",
+    "unknown": "Source unavailable",
+    "validated": "Validated"
+  },
+  "states": {
+    "energy_unavailable_body": "The public dashboard could not load current electricity context.",
+    "energy_unavailable_title": "Energy context unavailable",
+    "regional_anomaly_unavailable": "Regional demand anomaly is unavailable.",
+    "regional_source_unavailable": "Regional source unavailable",
+    "regional_value_unavailable": "Regional value is unavailable."
+  },
+  "status": {
+    "high": "High",
+    "no_recommendation": "No recommendation",
+    "normal": "Normal",
+    "unknown": "Unknown",
+    "watch": "Watch"
+  },
+  "technology": {
+    "bioenergy": "Bioenergy",
+    "coal": "Coal",
+    "gas": "Gas",
+    "hydro": "Hydro",
+    "nuclear": "Nuclear",
+    "oil": "Oil",
+    "other": "Other",
+    "solar": "Solar",
+    "unavailable": "Unavailable",
+    "wind": "Wind"
+  },
+  "terms": {
+    "local_generation": {
+      "definition": "Electricity generated in the selected region; the region remains part of the connected French grid.",
+      "label": "local generation"
+    },
+    "usual_demand": {
+      "definition": "A comparable-history baseline for the same season, day type, and local hour.",
+      "label": "usual demand"
+    }
+  },
+  "unavailable_reasons": {
+    "demand_anomaly_missing": "Demand anomaly is unavailable because observed or usual demand is missing.",
+    "difference_missing": "Difference versus usual is unavailable because demand or baseline is missing.",
+    "map_demand_anomaly": "Map demand anomaly unavailable.",
+    "no_regional_demand_record": "No regional demand record is available for this region.",
+    "no_regional_record": "No regional record is available for {region}.",
+    "usual_demand_geography": "Usual-demand baseline is unavailable for this geography.",
+    "value_unavailable": "Value unavailable."
+  },
+  "weather": {
+    "cold_demand_lift": "Cold demand lift",
+    "detail": "{temperature}, wind {wind} km/h, cloud {cloud}.",
+    "heat_demand_lift": "Heat demand lift",
+    "live_suffix": "{detail} Live reading - {location} - {source}.",
+    "mild_weather": "Mild weather",
+    "unavailable_detail": "Weather context is unavailable for this snapshot.",
+    "unavailable_headline": "Weather unavailable",
+    "wind_output_context": "Wind output context"
+  }
+}

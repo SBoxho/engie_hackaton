@@ -1,0 +1,243 @@
+{
+  "about": {
+    "body_1": "Ce prototype d'aide \u00e0 la d\u00e9cision, con\u00e7u pour le hackathon, sert \u00e0 rendre l'\u00e9lectricit\u00e9 plus lisible pour le public. Il combine observations RTE/ODRE, contexte EcoWatt, m\u00e9t\u00e9o et replis transparents pour expliquer s\u00e9par\u00e9ment la demande, la production, les \u00e9changes et la tension.",
+    "body_2": "Limites : ce n'est ni une pr\u00e9vision op\u00e9rationnelle RTE, ni un signal tarifaire, ni un outil de dispatching, ni une m\u00e9thode certifi\u00e9e de comptabilit\u00e9 carbone. Les donn\u00e9es d'exemple historiques sont distingu\u00e9es du contexte op\u00e9rationnel en direct.",
+    "title": "\u00c0 propos du projet"
+  },
+  "carbon": {
+    "detail": "Affich\u00e9 s\u00e9par\u00e9ment ; non utilis\u00e9 dans le signal officiel EcoWatt ni dans l'\u00e9tat estim\u00e9 du syst\u00e8me \u00e9lectrique.",
+    "label": "Contexte carbone"
+  },
+  "demand_difference": {
+    "above_usual": "{percent} au-dessus du niveau habituel",
+    "below_usual": "{percent} sous le niveau habituel",
+    "close_to_usual": "Proche du niveau habituel",
+    "unavailable": "Comparaison au niveau habituel indisponible"
+  },
+  "drivers": {
+    "demand_detail": "La France consomme {demand} ; le niveau de demande habituel pour ce contexte est {usual}.",
+    "demand_icon": "Demande",
+    "demand_label": "Facteur",
+    "generation_detail": {
+      "current_state": "La production observ\u00e9e est de {generation}. {flow}",
+      "modelled": "Le contexte production et \u00e9changes est de {margin} par rapport \u00e0 la demande. {flow}",
+      "unavailable": "Le contexte production et \u00e9changes est indisponible."
+    },
+    "generation_icon": "Prod.",
+    "generation_label": "Production et \u00e9changes",
+    "section_kicker": "Facteurs",
+    "section_title": "Qu'est-ce qui explique le signal ?",
+    "terms_html": "Termes : {usual_demand} et {local_generation}.",
+    "weather_icon": "M\u00e9t\u00e9o"
+  },
+  "flow": {
+    "net_exchange_near_zero": "\u00c9changes nets proches de z\u00e9ro",
+    "net_exchange_unavailable": "\u00c9changes nets indisponibles",
+    "net_exports": "Exportations nettes {value}",
+    "net_imports": "Importations nettes {value}"
+  },
+  "forecast": {
+    "aria": "Prochaines 12 heures",
+    "detail": "{status}. Source de pr\u00e9vision : {source}. Ce contexte est mod\u00e9lis\u00e9 et n'est pas une alerte officielle.",
+    "label": "Contexte de l'heure s\u00e9lectionn\u00e9e",
+    "section_copy": "Choisissez une heure pour mettre \u00e0 jour le contexte de pr\u00e9vision s\u00e9lectionn\u00e9.",
+    "section_kicker": "Prochaines 12 heures",
+    "section_title": "Ruban de demande s\u00e9lectionnable",
+    "title": "{timestamp} : {demand}",
+    "unavailable_body": "Aucun point de pr\u00e9vision n'est disponible pour l'heure s\u00e9lectionn\u00e9e.",
+    "unavailable_info": "Le contexte de pr\u00e9vision des prochaines 12 heures est indisponible.",
+    "unavailable_label": "Heure s\u00e9lectionn\u00e9e",
+    "unavailable_title": "Pr\u00e9vision de l'heure s\u00e9lectionn\u00e9e indisponible"
+  },
+  "freshness": {
+    "delayed_live_data": "Donn\u00e9es en direct retard\u00e9es",
+    "fresh": "Frais",
+    "fresh_live_data": "Donn\u00e9es en direct fra\u00eeches",
+    "historical_replay": "Rejeu historique",
+    "historical_sample_at": "Exemple historique {timestamp}",
+    "last_known_good_fallback": "Repli sur derni\u00e8res donn\u00e9es valides",
+    "source_unavailable": "Source indisponible",
+    "stale": "Donn\u00e9es anciennes",
+    "unavailable": "Fra\u00eecheur indisponible",
+    "updated_at": "Mis \u00e0 jour {timestamp}"
+  },
+  "generation_mix": {
+    "demand_marker": "Demande",
+    "section_kicker": "Mix de production",
+    "section_title": "Production, demande, \u00e9changes et carbone",
+    "source": "RTE eCO2mix et API d'\u00e9tat courant typ\u00e9e",
+    "stack_label": "Production",
+    "viz_detail": "Les principales sources sont indiqu\u00e9es directement. Les petites sources sont regroup\u00e9es dans Autres quand le graphique deviendrait trop charg\u00e9.",
+    "viz_title": "Mix de production actuel"
+  },
+  "hero": {
+    "aria": "Synth\u00e8se en langage clair de l'\u00e9lectricit\u00e9 en ce moment",
+    "body": "{unusual} ({difference} par rapport au niveau habituel). {driver}",
+    "eyebrow": "Que se passe-t-il maintenant ?",
+    "last_update": "Derni\u00e8re mise \u00e0 jour",
+    "near_term_direction": "Tendance \u00e0 court terme",
+    "title": "{demand} de demande nationale"
+  },
+  "main_driver": {
+    "demand": "Le facteur le plus net est la demande compar\u00e9e au niveau habituel.",
+    "no_single_driver": "Aucun facteur unique ne domine dans les sources disponibles.",
+    "residual_load": "La demande restante apr\u00e8s l'\u00e9olien et le solaire est le principal facteur mod\u00e9lis\u00e9.",
+    "unavailability": "L'indisponibilit\u00e9 annonc\u00e9e de production est le principal facteur mod\u00e9lis\u00e9.",
+    "weather": "Contexte m\u00e9t\u00e9o : {headline}."
+  },
+  "near_term": {
+    "falling": "En baisse dans les prochaines heures ({delta})",
+    "rising": "En hausse dans les prochaines heures ({delta})",
+    "steady": "Globalement stable dans les prochaines heures",
+    "unavailable": "Tendance \u00e0 court terme indisponible"
+  },
+  "notices": {
+    "delayed_source_data": {
+      "body": "L'API d'\u00e9tat courant indique que le dernier relev\u00e9 source est retard\u00e9.",
+      "title": "Donn\u00e9es source retard\u00e9es"
+    },
+    "kind": {
+      "empty": "Vide",
+      "error": "Erreur",
+      "fallback": "Repli",
+      "loading": "Chargement",
+      "partial": "Donn\u00e9es partielles",
+      "stale": "Donn\u00e9es anciennes"
+    },
+    "optional_source_unavailable": {
+      "body": "Un ou plusieurs champs de source optionnelle sont indisponibles.",
+      "title": "Source optionnelle indisponible"
+    },
+    "stale_data": {
+      "body": "Le dernier contrat typ\u00e9 indique que ces donn\u00e9es sont anciennes.",
+      "title": "Donn\u00e9es anciennes"
+    },
+    "typed_twin_contract_unavailable": {
+      "body": "La page utilise le contexte public historique pendant que la r\u00e9ponse typ\u00e9e est indisponible.",
+      "title": "Contrat typ\u00e9 indisponible"
+    },
+    "using_last_known_good": {
+      "body": "Le rafra\u00eechissement en direct n'a pas fourni de jeu de sources frais et complet.",
+      "title": "Repli sur derni\u00e8res donn\u00e9es valides"
+    }
+  },
+  "official": {
+    "detail_available": "Signal national officiel EcoWatt.",
+    "detail_unavailable": "Aucun signal officiel EcoWatt n'est disponible.",
+    "icon": "Eco",
+    "label": "Signal officiel",
+    "title_unavailable": "EcoWatt indisponible"
+  },
+  "provenance": {
+    "current_demand": "Demande actuelle",
+    "map_geometry": "G\u00e9om\u00e9trie de la carte",
+    "mode": "Mode",
+    "national_electricity": "\u00c9lectricit\u00e9 nationale",
+    "regional_electricity": "\u00c9lectricit\u00e9 r\u00e9gionale",
+    "title": "Provenance des donn\u00e9es"
+  },
+  "regions": {
+    "connected_grid_note": "Le contexte r\u00e9gional n'est pas une alerte de p\u00e9nurie isol\u00e9e. Les valeurs r\u00e9gionales d\u00e9crivent seulement le contexte du r\u00e9seau interconnect\u00e9 ; la production locale ne mesure pas l'\u00e9lectricit\u00e9 disponible uniquement dans la r\u00e9gion, et une production locale faible n'indique pas une p\u00e9nurie r\u00e9gionale d'\u00e9lectricit\u00e9.",
+    "demand_detail": "{context}",
+    "demand_icon": "Demande",
+    "demand_label": "Demande r\u00e9gionale",
+    "flow_balance": "Bilan physique {value}",
+    "flow_detail": "Les importations et exportations d\u00e9crivent le contexte des flux physiques lorsqu'il est disponible.",
+    "flow_icon": "Flux",
+    "flow_label": "Contexte des flux physiques",
+    "flow_net": "Flux net {value}",
+    "generation_detail": "Production mesur\u00e9e dans la r\u00e9gion, au sein du r\u00e9seau fran\u00e7ais interconnect\u00e9.",
+    "generation_icon": "Prod.",
+    "generation_label": "Production locale",
+    "map_colorbar": "Par rapport au niveau habituel",
+    "map_demand_anomaly": "\u00c9cart de demande",
+    "map_difference": "\u00c9cart",
+    "map_freshness": "Fra\u00eecheur",
+    "map_observed_demand": "Demande observ\u00e9e",
+    "map_reason": "Raison",
+    "map_source": "Source",
+    "map_unavailable": "Indisponible",
+    "map_unavailable_name": "Donn\u00e9es r\u00e9gionales indisponibles",
+    "map_available_name": "\u00c9cart r\u00e9gional disponible",
+    "map_usual_demand": "Niveau de demande habituel",
+    "note_unavailable": "Le contexte r\u00e9gional n'est pas une alerte de p\u00e9nurie isol\u00e9e ; les champs indisponibles restent indiqu\u00e9s comme indisponibles.",
+    "section_copy": "La couleur de la carte compare chaque r\u00e9gion \u00e0 son niveau de demande habituel pour un contexte comparable. Les r\u00e9gions grises sont indisponibles, pas \u00e0 z\u00e9ro.",
+    "section_kicker": "R\u00e9gions",
+    "section_title": "Demande par rapport au niveau habituel",
+    "selector_help": "Choisissez une r\u00e9gion pour mettre \u00e0 jour le panneau de contribution r\u00e9gionale.",
+    "selector_label": "R\u00e9gion s\u00e9lectionn\u00e9e",
+    "selected_label": "Contexte de la r\u00e9gion s\u00e9lectionn\u00e9e"
+  },
+  "routes": {
+    "local_nowcast_model": "Mod\u00e8le local de tr\u00e8s court terme",
+    "recent_comparable_hour_fallback": "Repli sur heure comparable r\u00e9cente",
+    "recent_pattern_nowcast": "Tr\u00e8s court terme par profil r\u00e9cent",
+    "rte_forecast": "Pr\u00e9vision RTE",
+    "unsupported_horizon_fallback": "Repli sur horizon non pris en charge",
+    "validated_model_fallback": "Repli sur mod\u00e8le valid\u00e9"
+  },
+  "source_quality": {
+    "delayed": "Retard\u00e9e",
+    "historical_replay": "Rejeu historique",
+    "last_known_good": "Derni\u00e8res donn\u00e9es valides",
+    "missing_region_record": "Relev\u00e9 r\u00e9gional manquant",
+    "unavailable": "Indisponible",
+    "unknown": "Source indisponible",
+    "validated": "Valid\u00e9e"
+  },
+  "states": {
+    "energy_unavailable_body": "Le tableau de bord public n'a pas pu charger le contexte \u00e9lectrique actuel.",
+    "energy_unavailable_title": "Contexte \u00e9lectrique indisponible",
+    "regional_anomaly_unavailable": "\u00c9cart de demande r\u00e9gionale indisponible.",
+    "regional_source_unavailable": "Source r\u00e9gionale indisponible",
+    "regional_value_unavailable": "Valeur r\u00e9gionale indisponible."
+  },
+  "status": {
+    "high": "\u00c9lev\u00e9",
+    "no_recommendation": "Pas de recommandation",
+    "normal": "Normal",
+    "unknown": "Inconnu",
+    "watch": "Vigilance"
+  },
+  "technology": {
+    "bioenergy": "Bio\u00e9nergie",
+    "coal": "Charbon",
+    "gas": "Gaz",
+    "hydro": "Hydraulique",
+    "nuclear": "Nucl\u00e9aire",
+    "oil": "Fioul",
+    "other": "Autres",
+    "solar": "Solaire",
+    "unavailable": "Indisponible",
+    "wind": "\u00c9olien"
+  },
+  "terms": {
+    "local_generation": {
+      "definition": "\u00c9lectricit\u00e9 produite dans la r\u00e9gion s\u00e9lectionn\u00e9e ; la r\u00e9gion reste int\u00e9gr\u00e9e au r\u00e9seau fran\u00e7ais interconnect\u00e9.",
+      "label": "production locale"
+    },
+    "usual_demand": {
+      "definition": "Niveau de r\u00e9f\u00e9rence calcul\u00e9 \u00e0 partir d'historiques comparables pour la m\u00eame saison, le m\u00eame type de jour et la m\u00eame heure locale.",
+      "label": "niveau de demande habituel"
+    }
+  },
+  "unavailable_reasons": {
+    "demand_anomaly_missing": "\u00c9cart de demande indisponible car la demande observ\u00e9e ou le niveau habituel manque.",
+    "difference_missing": "\u00c9cart au niveau habituel indisponible car la demande ou la r\u00e9f\u00e9rence manque.",
+    "map_demand_anomaly": "\u00c9cart de demande de la carte indisponible.",
+    "no_regional_demand_record": "Aucun relev\u00e9 de demande r\u00e9gionale n'est disponible pour cette r\u00e9gion.",
+    "no_regional_record": "Aucun relev\u00e9 r\u00e9gional n'est disponible pour {region}.",
+    "usual_demand_geography": "Le niveau de demande habituel est indisponible pour cette zone.",
+    "value_unavailable": "Valeur indisponible."
+  },
+  "weather": {
+    "cold_demand_lift": "Hausse de demande li\u00e9e au froid",
+    "detail": "{temperature}, vent {wind} km/h, nuages {cloud}.",
+    "heat_demand_lift": "Hausse de demande li\u00e9e \u00e0 la chaleur",
+    "live_suffix": "{detail} Relev\u00e9 en direct - {location} - {source}.",
+    "mild_weather": "M\u00e9t\u00e9o douce",
+    "unavailable_detail": "Contexte m\u00e9t\u00e9o indisponible pour cet instant.",
+    "unavailable_headline": "M\u00e9t\u00e9o indisponible",
+    "wind_output_context": "Contexte de production \u00e9olienne"
+  }
+}

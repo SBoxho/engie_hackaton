@@ -4,6 +4,8 @@ Energy Pulse France is a Python-first Streamlit application for trustworthy Fren
 
 No live, historical, weather, or forecast values are fabricated. Cached values are labelled as cached, and baseline forecasts are explicitly not described as AI.
 
+🔗 [**Live demo → energie-hackathon.streamlit.app**](https://energie-hackathon.streamlit.app/)
+
 ## UX structure
 
 The Streamlit entry page is now a story-first public demo: a hero, current grid pulse cards, a 24-hour demand-pressure timeline, plain-language driver cards, a demand-shifting simulator link, and a model-honesty box. Raw dataframes, calibration details, data quality checks, historical views, baseline backtests, and the experimental demand model remain available from the **Advanced / Data Science** section so non-technical reviewers see the energy-weather story first while technical reviewers can still inspect the evidence.

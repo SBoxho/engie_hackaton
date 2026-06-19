@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import html
+import json
 from typing import Any, Mapping
 
 import pandas as pd
@@ -14,7 +15,15 @@ from app.components.regional_map import (
     diverging_metric_range,
     signed_mw_tick,
 )
-from app.formatting import format_mw, format_signed_mw, format_timestamp, format_uncertainty_range
+from app.formatting import (
+    format_mw,
+    format_number,
+    format_percentage,
+    format_signed_mw,
+    format_temperature,
+    format_timestamp,
+)
+from app.i18n import normalize_locale, t
 from src.data_sources.rte_eco2mix_regional import REGION_NAMES
 
 
@@ -45,6 +54,26 @@ SCENARIO_ALIASES = {
     "generation_outage": "generation_unavailability",
     "outage": "generation_unavailability",
     "ev_shift": "ev_charging_shift",
+}
+
+API_TEXT_TRANSLATION_KEYS = {
+    "Generating-unit unavailability is represented as national supply availability only in v1.": "api_text.generation_unavailability_regional_reason",
+    "Regional demand deltas are allocated from the reconciled regional demand shares; this is not regional adequacy.": "api_text.regional_delta_method",
+    "Regional scenario demand-delta data is unavailable.": "api_text.regional_delta_unavailable",
+    "This scenario changes national supply context only.": "api_text.national_supply_only",
+    "This scenario type has no regional demand allocation in v1.": "api_text.no_regional_allocation",
+    "Scenario response estimate.": "api_text.scenario_response_estimate",
+    "After flexible generation response, a configured fraction of the remaining residual is represented as higher net imports, lower exports, lower net imports, or higher exports.": "api_text.import_export_method",
+    "Flexible generation absorbs a configured portion of residual change; wind and solar follow baseline forecasts.": "api_text.generation_response_method",
+    "Each positive residual MWh is multiplied by a plausible response-mix intensity range; each negative residual MWh is treated as avoided response-mix output.": "api_text.carbon_method",
+    "This is a directional public-decision scenario, not an operator dispatch forecast.": "api_text.caveat_directional",
+    "Imports, exports, flexible generation, and unresolved residual are represented as ranges to avoid false precision.": "api_text.caveat_ranges",
+    "The engine does not make import requirement automatically equal to peak-demand change.": "api_text.caveat_import_requirement",
+    "Carbon is a plausible response-mix range, not verified emissions accounting.": "api_text.caveat_carbon",
+    "Wind and solar follow their baseline adjusted forecasts.": "api_text.assumption_wind_solar",
+    "Nuclear follows availability context; generating-unit unavailability reduces available supply, not demand.": "api_text.assumption_nuclear",
+    "Cold-snap demand rerun uses heating_sensitivity_mw_per_c and deterministic local-hour multipliers.": "api_text.assumption_cold_snap",
+    "EV charging shift conserves total modelled scenario energy across complete source and target windows.": "api_text.assumption_ev_shift",
 }
 
 
@@ -81,6 +110,57 @@ def normalize_scenario_key(value: Any) -> str:
     key = str(value or "cold_snap").strip().lower()
     key = SCENARIO_ALIASES.get(key, key)
     return key if key in SCENARIO_PRESETS else "cold_snap"
+
+
+def scenario_preset_display(scenario_type: str, *, locale: str = "en") -> dict[str, str]:
+    key = normalize_scenario_key(scenario_type)
+    defaults = SCENARIO_PRESETS[key]
+    return {
+        "label": t(f"what_if.scenarios.{key}.label", locale=locale, default=defaults["label"]),
+        "short": t(f"what_if.scenarios.{key}.short", locale=locale, default=defaults["short"]),
+        "concept": t(f"what_if.scenarios.{key}.concept", locale=locale, default=defaults["concept"]),
+        "detail": t(f"what_if.scenarios.{key}.detail", locale=locale, default=defaults["detail"]),
+    }
+
+
+def scenario_preset_label(scenario_type: str, *, locale: str = "en") -> str:
+    return scenario_preset_display(scenario_type, locale=locale)["label"]
+
+
+def status_display_label(value: Any, *, locale: str = "en") -> str:
+    key = str(value or "unknown").strip().lower().replace("-", "_").replace(" ", "_")
+    return t(f"what_if.status.{key}", locale=locale, default=str(value or "unknown").title())
+
+
+def card_status_display(status: str, *, locale: str = "en") -> str:
+    if status == "watch":
+        return t("what_if.card_status.watch", locale=locale, default="Watch")
+    if status == "green":
+        return t("what_if.card_status.green", locale=locale, default="Normal")
+    if status == "info":
+        return t("what_if.card_status.info", locale=locale, default="Info")
+    return status
+
+
+def translate_api_text(text: Any, *, locale: str = "en") -> str:
+    value = str(text or "").strip()
+    if not value:
+        return ""
+    if value.startswith("Request assumptions: "):
+        return _translate_request_assumptions(value, locale=locale)
+    if value.startswith("Scenario assumptions artifact: "):
+        version = value.removeprefix("Scenario assumptions artifact: ").rstrip(".")
+        return t("what_if.api_text.assumption_artifact", locale=locale, default=value, version=version)
+    if value.startswith("Flexible generation response fraction range: "):
+        fraction = value.removeprefix("Flexible generation response fraction range: ").removesuffix(" of residual change.")
+        return t("what_if.api_text.assumption_generation_fraction", locale=locale, default=value, fraction=fraction)
+    if value.startswith("Import/export response fraction range after flexible response: "):
+        fraction = value.removeprefix("Import/export response fraction range after flexible response: ").rstrip(".")
+        return t("what_if.api_text.assumption_import_fraction", locale=locale, default=value, fraction=fraction)
+    key = API_TEXT_TRANSLATION_KEYS.get(value)
+    if key:
+        return t(f"what_if.{key}", locale=locale, default=value)
+    return value
 
 
 def restore_scenario_controls(
@@ -187,15 +267,31 @@ def build_scenario_request(
     }
 
 
-def validate_controls(controls: ScenarioControls) -> str | None:
+def validate_controls(controls: ScenarioControls, *, locale: str = "en") -> str | None:
     if controls.end_offset_hours <= controls.start_offset_hours:
-        return "Scenario end time must be after start time."
+        return t(
+            "what_if.validation.end_after_start",
+            locale=locale,
+            default="Scenario end time must be after start time.",
+        )
     if controls.scenario_type == "ev_charging_shift" and controls.original_window == controls.target_window:
-        return "EV source and target charging windows must be different."
+        return t(
+            "what_if.validation.ev_windows_different",
+            locale=locale,
+            default="EV source and target charging windows must be different.",
+        )
     if controls.scenario_type == "ev_charging_shift" and controls.ev_participation <= 0:
-        return "EV participation must be greater than zero."
+        return t(
+            "what_if.validation.ev_participation_positive",
+            locale=locale,
+            default="EV participation must be greater than zero.",
+        )
     if controls.magnitude <= 0:
-        return "Scenario magnitude must be greater than zero."
+        return t(
+            "what_if.validation.magnitude_positive",
+            locale=locale,
+            default="Scenario magnitude must be greater than zero.",
+        )
     return None
 
 
@@ -238,62 +334,86 @@ def scenario_summary(result: Mapping[str, Any]) -> ScenarioSummary:
     )
 
 
-def magnitude_label_from_request(result: Mapping[str, Any]) -> str:
+def magnitude_label_from_request(result: Mapping[str, Any], *, locale: str = "en") -> str:
     request = result.get("scenario_request") or {}
     scenario_type = str(request.get("scenario_type") or "")
     magnitude = request.get("magnitude") or {}
     if scenario_type == "cold_snap":
         value = abs(float(magnitude.get("temperature_delta_c") or 0.0))
-        return f"{value:g} deg C colder"
+        return t(
+            "what_if.magnitude.cold_snap",
+            locale=locale,
+            default="{value} colder",
+            value=format_temperature(value, locale=locale),
+        )
     if scenario_type == "generation_unavailability":
         value = float(magnitude.get("unavailable_capacity_mw") or 0.0)
         asset = magnitude.get("asset_name")
-        label = format_mw(value)
-        return f"{label} unavailable" if not asset else f"{asset}: {label} unavailable"
+        label = format_mw(value, locale=locale)
+        if not asset:
+            return t("what_if.magnitude.generation_unavailability", locale=locale, default="{value} unavailable", value=label)
+        return t(
+            "what_if.magnitude.generation_unavailability_asset",
+            locale=locale,
+            default="{asset}: {value} unavailable",
+            asset=asset,
+            value=label,
+        )
     if scenario_type == "ev_charging_shift":
         vehicles = int(float(magnitude.get("vehicles") or 0))
         energy = float(magnitude.get("average_energy_per_vehicle_kwh") or 0.0)
         participation = float(magnitude.get("participation_rate") or 0.0)
-        return f"{vehicles:,} EVs, {energy:g} kWh each, {participation:.0%} participating"
-    return "Scenario magnitude"
+        return t(
+            "what_if.magnitude.ev_charging_shift",
+            locale=locale,
+            default="{vehicles} EVs, {energy} kWh each, {participation} participating",
+            vehicles=format_number(vehicles, locale=locale),
+            energy=_format_compact_number(energy, locale=locale),
+            participation=format_percentage(participation, locale=locale),
+        )
+    return t("what_if.magnitude.generic", locale=locale, default="Scenario magnitude")
 
 
-def scenario_window_label(result: Mapping[str, Any], *, timezone_name: str) -> str:
+def scenario_window_label(result: Mapping[str, Any], *, timezone_name: str, locale: str = "en") -> str:
     request = result.get("scenario_request") or {}
     start = _as_utc(request.get("start_time"))
     end = _as_utc(request.get("end_time"))
     duration = float(request.get("duration_hours") or 0.0)
-    return (
-        f"{format_timestamp(start, timezone_name=timezone_name, include_date=False)} to "
-        f"{format_timestamp(end, timezone_name=timezone_name, include_date=False)} ({duration:g}h window)"
+    return t(
+        "what_if.window.label",
+        locale=locale,
+        default="{start} to {end} ({duration}h window)",
+        start=format_timestamp(start, timezone_name=timezone_name, include_date=False, locale=locale),
+        end=format_timestamp(end, timezone_name=timezone_name, include_date=False, locale=locale),
+        duration=_format_compact_number(duration, locale=locale),
     )
 
 
-def causal_chain_steps(result: Mapping[str, Any]) -> list[tuple[str, str]]:
+def causal_chain_steps(result: Mapping[str, Any], *, locale: str = "en") -> list[tuple[str, str]]:
     chain = result.get("causal_chain") or {}
     scenario_type = str(chain.get("scenario_type") or result.get("scenario_request", {}).get("scenario_type") or "")
     if scenario_type == "cold_snap":
         return [
-            ("Colder weather", "Temperature input changes"),
-            ("Heating demand rises", "Demand P50 is rerun for active hours"),
-            ("Residual load rises", "More demand remains after weather-sensitive supply"),
-            ("Flexible generation/imports respond", "Estimated response ranges absorb part of the residual"),
-            ("Balance tightens", "App balance status can move"),
+            (_chain_title("cold_snap", 1, locale=locale), _chain_detail("cold_snap", 1, locale=locale)),
+            (_chain_title("cold_snap", 2, locale=locale), _chain_detail("cold_snap", 2, locale=locale)),
+            (_chain_title("cold_snap", 3, locale=locale), _chain_detail("cold_snap", 3, locale=locale)),
+            (_chain_title("cold_snap", 4, locale=locale), _chain_detail("cold_snap", 4, locale=locale)),
+            (_chain_title("cold_snap", 5, locale=locale), _chain_detail("cold_snap", 5, locale=locale)),
         ]
     if scenario_type == "generation_unavailability":
         return [
-            ("Unit unavailable", "Capacity is removed from availability"),
-            ("Available generation falls", "Demand is unchanged"),
-            ("Residual load rises", "The same demand has less available supply"),
-            ("Flexible supply/imports respond", "Estimated response ranges absorb part of the residual"),
-            ("Balance context changes", "App balance status can move"),
+            (_chain_title("generation_unavailability", 1, locale=locale), _chain_detail("generation_unavailability", 1, locale=locale)),
+            (_chain_title("generation_unavailability", 2, locale=locale), _chain_detail("generation_unavailability", 2, locale=locale)),
+            (_chain_title("generation_unavailability", 3, locale=locale), _chain_detail("generation_unavailability", 3, locale=locale)),
+            (_chain_title("generation_unavailability", 4, locale=locale), _chain_detail("generation_unavailability", 4, locale=locale)),
+            (_chain_title("generation_unavailability", 5, locale=locale), _chain_detail("generation_unavailability", 5, locale=locale)),
         ]
     return [
-        ("EV charging shifts", "The same energy moves windows"),
-        ("Evening demand falls", "Source-window demand delta is negative"),
-        ("Overnight demand rises", "Target-window demand delta is positive"),
-        ("Peak may move", "Rebound hours are flagged by the scenario API"),
-        ("Carbon range changes", "Response-mix emissions are estimated as a range"),
+        (_chain_title("ev_charging_shift", 1, locale=locale), _chain_detail("ev_charging_shift", 1, locale=locale)),
+        (_chain_title("ev_charging_shift", 2, locale=locale), _chain_detail("ev_charging_shift", 2, locale=locale)),
+        (_chain_title("ev_charging_shift", 3, locale=locale), _chain_detail("ev_charging_shift", 3, locale=locale)),
+        (_chain_title("ev_charging_shift", 4, locale=locale), _chain_detail("ev_charging_shift", 4, locale=locale)),
+        (_chain_title("ev_charging_shift", 5, locale=locale), _chain_detail("ev_charging_shift", 5, locale=locale)),
     ]
 
 
@@ -343,6 +463,7 @@ def event_timeline_chart(
     *,
     selected_timestamp: Any = None,
     timezone_name: str = "Europe/Paris",
+    locale: str = "en",
 ) -> go.Figure:
     baseline, scenario = scenario_frames(result)
     request = result.get("scenario_request") or {}
@@ -355,11 +476,11 @@ def event_timeline_chart(
                 x=baseline["timestamp"],
                 y=baseline["demand_mw"],
                 mode="lines",
-                name="Baseline demand context",
+                name=t("what_if.charts.event_timeline.baseline_context", locale=locale, default="Baseline demand context"),
                 line=dict(color="rgba(226,232,240,.78)", width=2),
                 fill="tozeroy",
                 fillcolor="rgba(148,163,184,.12)",
-                hovertemplate="Baseline: %{y:,.0f} MW<extra></extra>",
+                hovertemplate=t("what_if.charts.event_timeline.baseline_hover", locale=locale, default="Baseline: %{y:,.0f} MW<extra></extra>"),
             )
         )
         top = float(pd.to_numeric(baseline["demand_mw"], errors="coerce").max())
@@ -380,7 +501,7 @@ def event_timeline_chart(
                 x=[start, end],
                 y=[top + pad * 0.5, top + pad * 0.5],
                 mode="markers",
-                name="Start and end handles",
+                name=t("what_if.charts.event_timeline.handles", locale=locale, default="Start and end handles"),
                 marker=dict(size=14, color="#f8fafc", symbol="line-ns-open", line=dict(color="#42d6c7", width=3)),
                 hovertemplate="%{x|%a %H:%M}<extra></extra>",
             )
@@ -409,6 +530,7 @@ def baseline_scenario_chart(
     *,
     selected_timestamp: Any = None,
     timezone_name: str = "Europe/Paris",
+    locale: str = "en",
 ) -> go.Figure:
     baseline, scenario = scenario_frames(result)
     fig = go.Figure()
@@ -421,7 +543,7 @@ def baseline_scenario_chart(
                 line=dict(width=0),
                 hoverinfo="skip",
                 showlegend=False,
-                name="Baseline p90",
+                name=t("what_if.charts.baseline_scenario.baseline_p90", locale=locale, default="Baseline p90"),
             )
         )
         fig.add_trace(
@@ -432,8 +554,8 @@ def baseline_scenario_chart(
                 fill="tonexty",
                 fillcolor="rgba(148,163,184,.16)",
                 line=dict(width=0),
-                name="Baseline uncertainty",
-                hovertemplate="P10-P90: %{y:,.0f} MW<extra></extra>",
+                name=t("what_if.charts.baseline_scenario.baseline_uncertainty", locale=locale, default="Baseline uncertainty"),
+                hovertemplate=t("what_if.charts.baseline_scenario.uncertainty_hover", locale=locale, default="P10-P90: %{y:,.0f} MW<extra></extra>"),
             )
         )
         fig.add_trace(
@@ -441,9 +563,9 @@ def baseline_scenario_chart(
                 x=baseline["timestamp"],
                 y=baseline["demand_mw"],
                 mode="lines",
-                name="Baseline P50",
+                name=t("what_if.charts.baseline_scenario.baseline_p50", locale=locale, default="Baseline P50"),
                 line=dict(color="#f8fafc", width=2.2),
-                hovertemplate="Baseline P50: %{y:,.0f} MW<extra></extra>",
+                hovertemplate=t("what_if.charts.baseline_scenario.baseline_p50_hover", locale=locale, default="Baseline P50: %{y:,.0f} MW<extra></extra>"),
             )
         )
     if not baseline.empty and not scenario.empty:
@@ -455,7 +577,7 @@ def baseline_scenario_chart(
                 line=dict(width=0),
                 hoverinfo="skip",
                 showlegend=False,
-                name="Scenario delta upper",
+                name=t("what_if.charts.baseline_scenario.delta_upper", locale=locale, default="Scenario delta upper"),
             )
         )
         fig.add_trace(
@@ -466,7 +588,7 @@ def baseline_scenario_chart(
                 fill="tonexty",
                 fillcolor="rgba(66,214,199,.20)",
                 line=dict(width=0),
-                name="Delta area",
+                name=t("what_if.charts.baseline_scenario.delta_area", locale=locale, default="Delta area"),
                 hoverinfo="skip",
             )
         )
@@ -474,7 +596,7 @@ def baseline_scenario_chart(
         customdata = [
             [
                 pd.Timestamp(row.timestamp).isoformat(),
-                row.balance_status,
+                status_display_label(row.balance_status, locale=locale),
                 row.demand_delta_mw,
                 row.import_export_delta_mw,
             ]
@@ -485,16 +607,20 @@ def baseline_scenario_chart(
                 x=scenario["timestamp"],
                 y=scenario["demand_mw"],
                 mode="lines+markers",
-                name="Scenario P50",
+                name=t("what_if.charts.baseline_scenario.scenario_p50", locale=locale, default="Scenario P50"),
                 line=dict(color="#42d6c7", width=2.7),
                 marker=dict(size=7, color="#42d6c7", line=dict(width=1, color="#07111d")),
                 customdata=customdata,
-                hovertemplate=(
-                    "<b>%{x|%a %d %b %H:%M}</b><br>"
-                    "Scenario P50: %{y:,.0f} MW<br>"
-                    "Status: %{customdata[1]}<br>"
-                    "Demand delta: %{customdata[2]:+,.0f} MW<br>"
-                    "Import/export response: %{customdata[3]:+,.0f} MW<extra></extra>"
+                hovertemplate=t(
+                    "what_if.charts.baseline_scenario.scenario_hover",
+                    locale=locale,
+                    default=(
+                        "<b>%{x|%a %d %b %H:%M}</b><br>"
+                        "Scenario P50: %{y:,.0f} MW<br>"
+                        "Status: %{customdata[1]}<br>"
+                        "Demand delta: %{customdata[2]:+,.0f} MW<br>"
+                        "Import/export response: %{customdata[3]:+,.0f} MW<extra></extra>"
+                    ),
                 ),
             )
         )
@@ -517,7 +643,7 @@ def baseline_scenario_chart(
                 x=[row["timestamp"]],
                 y=[row["demand_mw"]],
                 mode="markers",
-                name="Selected hour",
+                name=t("what_if.charts.baseline_scenario.selected_hour", locale=locale, default="Selected hour"),
                 marker=dict(size=17, color="#f8fafc", symbol="circle-open", line=dict(color="#42d6c7", width=3)),
                 hoverinfo="skip",
             )
@@ -528,7 +654,7 @@ def baseline_scenario_chart(
             height=430,
             margin=dict(l=8, r=8, t=18, b=8),
             xaxis_title=None,
-            yaxis_title="Demand MW",
+            yaxis_title=t("what_if.charts.baseline_scenario.yaxis", locale=locale, default="Demand MW"),
             hovermode="x unified",
             legend_title=None,
             clickmode="event+select",
@@ -537,7 +663,7 @@ def baseline_scenario_chart(
     return fig
 
 
-def demand_delta_chart(result: Mapping[str, Any]) -> go.Figure:
+def demand_delta_chart(result: Mapping[str, Any], *, locale: str = "en") -> go.Figure:
     _, scenario = scenario_frames(result)
     fig = go.Figure()
     if not scenario.empty:
@@ -547,8 +673,8 @@ def demand_delta_chart(result: Mapping[str, Any]) -> go.Figure:
             x=scenario["timestamp"],
             y=deltas,
             marker_color=colors,
-            name="Demand delta",
-            hovertemplate="Demand delta: %{y:+,.0f} MW<extra></extra>",
+            name=t("what_if.charts.demand_delta.name", locale=locale, default="Demand delta"),
+            hovertemplate=t("what_if.charts.demand_delta.hover", locale=locale, default="Demand delta: %{y:+,.0f} MW<extra></extra>"),
         )
     fig.add_hline(y=0, line=dict(color="rgba(226,232,240,.55)", width=1))
     fig.update_layout(
@@ -563,7 +689,7 @@ def demand_delta_chart(result: Mapping[str, Any]) -> go.Figure:
     return fig
 
 
-def generation_response_chart(result: Mapping[str, Any]) -> go.Figure:
+def generation_response_chart(result: Mapping[str, Any], *, locale: str = "en") -> go.Figure:
     _, scenario = scenario_frames(result)
     generation_range = _range_tuple(
         result.get("estimated_generation_response_range", {}).get("flexible_generation_delta_mwh_range")
@@ -575,9 +701,9 @@ def generation_response_chart(result: Mapping[str, Any]) -> go.Figure:
     if not scenario.empty and "unresolved_residual_mw" in scenario:
         unresolved = float(pd.to_numeric(scenario["unresolved_residual_mw"], errors="coerce").fillna(0.0).sum())
     rows = [
-        ("Flexible generation", generation_range[0], generation_range[1], "#42d6c7"),
-        ("Imports / exports", import_range[0], import_range[1], "#93c5fd"),
-        ("Unresolved residual", min(0.0, unresolved), max(0.0, unresolved), "#f59e0b"),
+        (t("what_if.charts.generation_response.flexible_generation", locale=locale, default="Flexible generation"), generation_range[0], generation_range[1], "#42d6c7"),
+        (t("what_if.charts.generation_response.imports_exports", locale=locale, default="Imports / exports"), import_range[0], import_range[1], "#93c5fd"),
+        (t("what_if.charts.generation_response.unresolved_residual", locale=locale, default="Unresolved residual"), min(0.0, unresolved), max(0.0, unresolved), "#f59e0b"),
     ]
     fig = go.Figure()
     for label, low, high, color in rows:
@@ -588,14 +714,21 @@ def generation_response_chart(result: Mapping[str, Any]) -> go.Figure:
             orientation="h",
             marker_color=color,
             name=label,
-            hovertemplate=f"{html.escape(label)}: {low:+,.0f} to {high:+,.0f} MWh<extra></extra>",
+            hovertemplate=t(
+                "what_if.charts.generation_response.hover",
+                locale=locale,
+                default="{label}: {low} to {high} MWh<extra></extra>",
+                label=html.escape(label),
+                low=format_number(low, signed=True, locale=locale),
+                high=format_number(high, signed=True, locale=locale),
+            ),
         )
     fig.add_vline(x=0, line=dict(color="rgba(226,232,240,.55)", width=1))
     fig.update_layout(
         **dark_chart_layout(
             height=260,
             margin=dict(l=8, r=8, t=16, b=8),
-            xaxis_title="Estimated MWh delta",
+            xaxis_title=t("what_if.charts.generation_response.xaxis", locale=locale, default="Estimated MWh delta"),
             yaxis_title=None,
             showlegend=False,
         )
@@ -603,7 +736,7 @@ def generation_response_chart(result: Mapping[str, Any]) -> go.Figure:
     return fig
 
 
-def regional_delta_frame(regional: pd.DataFrame, result: Mapping[str, Any]) -> pd.DataFrame:
+def regional_delta_frame(regional: pd.DataFrame, result: Mapping[str, Any], *, locale: str = "en") -> pd.DataFrame:
     source = regional.copy()
     if source.empty:
         rows = [
@@ -624,6 +757,7 @@ def regional_delta_frame(regional: pd.DataFrame, result: Mapping[str, Any]) -> p
         (result.get("regional_deltas") or {}).get("reason")
         or "Regional scenario demand-delta data is unavailable."
     )
+    unavailable_reason = translate_api_text(unavailable_reason, locale=locale)
     source["region_code"] = source["region_code"].astype(str)
     source["total_delta_mwh"] = source["region_code"].map(lambda code: float(deltas.get(code, {}).get("total_delta_mwh") or 0.0))
     source["peak_delta_mw"] = source["region_code"].map(lambda code: float(deltas.get(code, {}).get("peak_delta_mw") or 0.0))
@@ -635,18 +769,28 @@ def regional_delta_frame(regional: pd.DataFrame, result: Mapping[str, Any]) -> p
     )
     source["delta_label"] = source.apply(
         lambda row: (
-            f"{format_signed_mw(row['peak_delta_mw'])} peak, {_format_signed_energy(row['total_delta_mwh'])}"
+            t(
+                "what_if.regional.delta_label",
+                locale=locale,
+                default="{peak} peak, {total}",
+                peak=format_signed_mw(row["peak_delta_mw"], locale=locale),
+                total=_format_signed_energy(row["total_delta_mwh"], locale=locale),
+            )
             if row["delta_available"] and row["changed"]
-            else "Regional demand delta unavailable"
+            else t(
+                "what_if.regional.delta_unavailable",
+                locale=locale,
+                default="Regional demand delta unavailable",
+            )
             if not row["delta_available"]
-            else "No demand delta"
+            else t("what_if.regional.no_delta", locale=locale, default="No demand delta")
         ),
         axis=1,
     )
     return source
 
 
-def regional_delta_choropleth(frame: pd.DataFrame, geojson: dict) -> go.Figure:
+def regional_delta_choropleth(frame: pd.DataFrame, geojson: dict, *, locale: str = "en") -> go.Figure:
     work = frame.copy()
     if work.empty:
         work = pd.DataFrame(columns=["region_code", "region_display", "peak_delta_mw", "total_delta_mwh", "changed"])
@@ -670,7 +814,15 @@ def regional_delta_choropleth(frame: pd.DataFrame, geojson: dict) -> go.Figure:
         if "unavailable_reason" in work
         else pd.Series("Regional scenario demand-delta data is unavailable.", index=work.index)
     )
-    work["unavailable_reason"] = unavailable_reason.fillna("Regional scenario demand-delta data is unavailable.")
+    work["unavailable_reason"] = unavailable_reason.fillna("Regional scenario demand-delta data is unavailable.").map(
+        lambda value: translate_api_text(value, locale=locale)
+    )
+    changed_display_column = "changed"
+    if normalize_locale(locale, default="en") != "en":
+        changed_display_column = "changed_label"
+        work[changed_display_column] = work["changed"].map(
+            lambda value: t("what_if.common.yes", locale=locale) if value else t("what_if.common.no", locale=locale)
+        )
 
     changed = work.loc[work["changed"]].copy()
     unchanged = work.loc[work["delta_available"] & ~work["changed"]].copy()
@@ -692,7 +844,7 @@ def regional_delta_choropleth(frame: pd.DataFrame, geojson: dict) -> go.Figure:
                 marker_line_color="rgba(248,250,252,.82)",
                 marker_line_width=0.95,
                 colorbar=dict(
-                    title="Peak delta",
+                    title=t("what_if.charts.regional_delta.colorbar", locale=locale, default="Peak delta"),
                     tickmode="array",
                     tickvals=[-max_abs, 0, max_abs],
                     ticktext=[signed_mw_tick(-max_abs), "0 MW", signed_mw_tick(max_abs)],
@@ -700,14 +852,18 @@ def regional_delta_choropleth(frame: pd.DataFrame, geojson: dict) -> go.Figure:
                     thickness=12,
                     len=0.72,
                 ),
-                customdata=changed[["region_display", "peak_delta_mw", "total_delta_mwh", "changed"]],
-                hovertemplate=(
-                    "<b>%{customdata[0]}</b><br>"
-                    "Peak delta: %{customdata[1]:+,.0f} MW<br>"
-                    "Total delta: %{customdata[2]:+,.0f} MWh<br>"
-                    "Changed: %{customdata[3]}<extra></extra>"
+                customdata=changed[["region_display", "peak_delta_mw", "total_delta_mwh", changed_display_column]],
+                hovertemplate=t(
+                    "what_if.charts.regional_delta.changed_hover",
+                    locale=locale,
+                    default=(
+                        "<b>%{customdata[0]}</b><br>"
+                        "Peak delta: %{customdata[1]:+,.0f} MW<br>"
+                        "Total delta: %{customdata[2]:+,.0f} MWh<br>"
+                        "Changed: %{customdata[3]}<extra></extra>"
+                    ),
                 ),
-                name="Changed regional demand delta",
+                name=t("what_if.charts.regional_delta.changed_name", locale=locale, default="Changed regional demand delta"),
             )
         )
     if not unchanged.empty:
@@ -723,14 +879,18 @@ def regional_delta_choropleth(frame: pd.DataFrame, geojson: dict) -> go.Figure:
                 showscale=False,
                 marker_line_color="rgba(226,232,240,.62)",
                 marker_line_width=0.75,
-                customdata=unchanged[["region_display", "peak_delta_mw", "total_delta_mwh", "changed"]],
-                hovertemplate=(
-                    "<b>%{customdata[0]}</b><br>"
-                    "Peak delta: %{customdata[1]:+,.0f} MW<br>"
-                    "Total delta: %{customdata[2]:+,.0f} MWh<br>"
-                    "Changed: %{customdata[3]}<extra></extra>"
+                customdata=unchanged[["region_display", "peak_delta_mw", "total_delta_mwh", changed_display_column]],
+                hovertemplate=t(
+                    "what_if.charts.regional_delta.changed_hover",
+                    locale=locale,
+                    default=(
+                        "<b>%{customdata[0]}</b><br>"
+                        "Peak delta: %{customdata[1]:+,.0f} MW<br>"
+                        "Total delta: %{customdata[2]:+,.0f} MWh<br>"
+                        "Changed: %{customdata[3]}<extra></extra>"
+                    ),
                 ),
-                name="Unchanged regional demand delta",
+                name=t("what_if.charts.regional_delta.unchanged_name", locale=locale, default="Unchanged regional demand delta"),
             )
         )
     if not unavailable.empty:
@@ -747,12 +907,16 @@ def regional_delta_choropleth(frame: pd.DataFrame, geojson: dict) -> go.Figure:
                 marker_line_color="rgba(226,232,240,.72)",
                 marker_line_width=0.85,
                 customdata=unavailable[["region_display", "unavailable_reason"]],
-                hovertemplate=(
-                    "<b>%{customdata[0]}</b><br>"
-                    "Demand delta: Unavailable<br>"
-                    "Reason: %{customdata[1]}<extra></extra>"
+                hovertemplate=t(
+                    "what_if.charts.regional_delta.unavailable_hover",
+                    locale=locale,
+                    default=(
+                        "<b>%{customdata[0]}</b><br>"
+                        "Demand delta: Unavailable<br>"
+                        "Reason: %{customdata[1]}<extra></extra>"
+                    ),
                 ),
-                name="Unavailable regional demand delta",
+                name=t("what_if.charts.regional_delta.unavailable_name", locale=locale, default="Unavailable regional demand delta"),
             )
         )
     fig.update_geos(
@@ -797,43 +961,159 @@ def _short_region_label(value: Any) -> str:
     return aliases.get(text, text)
 
 
-def changed_region_table(frame: pd.DataFrame) -> pd.DataFrame:
+def changed_region_table(frame: pd.DataFrame, *, locale: str = "en") -> pd.DataFrame:
     changed = frame.loc[frame["changed"]].copy()
+    columns = [
+        t("what_if.tables.changed_regions.region", locale=locale, default="Region"),
+        t("what_if.tables.changed_regions.peak_demand_delta", locale=locale, default="Peak demand delta"),
+        t("what_if.tables.changed_regions.total_energy_delta", locale=locale, default="Total energy delta"),
+    ]
     if changed.empty:
-        return pd.DataFrame(columns=["Region", "Peak demand delta", "Total energy delta"])
+        return pd.DataFrame(columns=columns)
     changed["abs_peak"] = changed["peak_delta_mw"].abs()
     changed = changed.sort_values("abs_peak", ascending=False)
     return pd.DataFrame(
         {
-            "Region": changed["region_display"],
-            "Peak demand delta": changed["peak_delta_mw"].map(format_signed_mw),
-            "Total energy delta": changed["total_delta_mwh"].map(_format_signed_energy),
+            columns[0]: changed["region_display"],
+            columns[1]: changed["peak_delta_mw"].map(lambda value: format_signed_mw(value, locale=locale)),
+            columns[2]: changed["total_delta_mwh"].map(lambda value: _format_signed_energy(value, locale=locale)),
         }
     )
 
 
-def format_watch_high_delta(value: int) -> str:
+def format_watch_high_delta(value: int, *, locale: str = "en") -> str:
     if value > 0:
-        return f"+{value} Watch/High h"
+        return t(
+            "what_if.formats.watch_high_delta",
+            locale=locale,
+            default="{value} Watch/High h",
+            value=f"+{format_number(value, locale=locale)}",
+        )
     if value < 0:
-        return f"{value} Watch/High h"
-    return "0 Watch/High h"
+        return t(
+            "what_if.formats.watch_high_delta",
+            locale=locale,
+            default="{value} Watch/High h",
+            value=f"-{format_number(abs(value), locale=locale)}",
+        )
+    return t("what_if.formats.watch_high_delta", locale=locale, default="{value} Watch/High h", value=format_number(0, locale=locale))
 
 
-def format_score_delta(value: float) -> str:
-    return f"{value:+.2f} score"
+def format_score_delta(value: float, *, locale: str = "en") -> str:
+    return t(
+        "what_if.formats.score_delta",
+        locale=locale,
+        default="{value} score",
+        value=format_number(value, decimals=2, signed=True, locale=locale),
+    )
 
 
-def format_signed_range(values: tuple[float, float], *, unit: str) -> str:
+def format_signed_range(values: tuple[float, float], *, unit: str, locale: str = "en") -> str:
     low, high = values
     if unit == "MWh":
-        return f"{_format_signed_energy(low)} to {_format_signed_energy(high)}"
-    return f"{low:+,.0f} to {high:+,.0f} {unit}"
+        return t(
+            "what_if.formats.range",
+            locale=locale,
+            default="{low} to {high}",
+            low=_format_signed_energy(low, locale=locale),
+            high=_format_signed_energy(high, locale=locale),
+        )
+    return t(
+        "what_if.formats.range",
+        locale=locale,
+        default="{low} to {high}",
+        low=f"{format_number(low, signed=True, locale=locale)} {unit}",
+        high=f"{format_number(high, signed=True, locale=locale)} {unit}",
+    )
 
 
-def format_carbon_range(values: tuple[float, float]) -> str:
+def format_carbon_range(values: tuple[float, float], *, locale: str = "en") -> str:
     low, high = values
-    return f"{low:+,.0f} to {high:+,.0f} t CO2"
+    return t(
+        "what_if.formats.range",
+        locale=locale,
+        default="{low} to {high}",
+        low=f"{format_number(low, signed=True, locale=locale)} t CO2",
+        high=f"{format_number(high, signed=True, locale=locale)} t CO2",
+    )
+
+
+def _chain_title(scenario_type: str, index: int, *, locale: str) -> str:
+    return t(
+        f"what_if.chain.{scenario_type}.{index}.title",
+        locale=locale,
+        default=_CHAIN_DEFAULTS[scenario_type][index - 1][0],
+    )
+
+
+def _chain_detail(scenario_type: str, index: int, *, locale: str) -> str:
+    return t(
+        f"what_if.chain.{scenario_type}.{index}.detail",
+        locale=locale,
+        default=_CHAIN_DEFAULTS[scenario_type][index - 1][1],
+    )
+
+
+_CHAIN_DEFAULTS = {
+    "cold_snap": [
+        ("Colder weather", "Temperature input changes"),
+        ("Heating demand rises", "Demand P50 is rerun for active hours"),
+        ("Residual load rises", "More demand remains after weather-sensitive supply"),
+        ("Flexible generation/imports respond", "Estimated response ranges absorb part of the residual"),
+        ("Balance tightens", "App balance status can move"),
+    ],
+    "generation_unavailability": [
+        ("Unit unavailable", "Capacity is removed from availability"),
+        ("Available generation falls", "Demand is unchanged"),
+        ("Residual load rises", "The same demand has less available supply"),
+        ("Flexible supply/imports respond", "Estimated response ranges absorb part of the residual"),
+        ("Balance context changes", "App balance status can move"),
+    ],
+    "ev_charging_shift": [
+        ("EV charging shifts", "The same energy moves windows"),
+        ("Evening demand falls", "Source-window demand delta is negative"),
+        ("Overnight demand rises", "Target-window demand delta is positive"),
+        ("Peak may move", "Rebound hours are flagged by the scenario API"),
+        ("Carbon range changes", "Response-mix emissions are estimated as a range"),
+    ],
+}
+
+
+def _translate_request_assumptions(value: str, *, locale: str) -> str:
+    raw_payload = value.removeprefix("Request assumptions: ").strip()
+    try:
+        payload = json.loads(raw_payload)
+    except json.JSONDecodeError:
+        return t("what_if.api_text.request_assumptions_raw", locale=locale, default=value, payload=raw_payload)
+    if not isinstance(payload, Mapping):
+        return t("what_if.api_text.request_assumptions_raw", locale=locale, default=value, payload=raw_payload)
+
+    estimate = str(payload.get("estimate") or "")
+    estimate_label = (
+        t("what_if.api_text.estimate_educational_directional", locale=locale, default=estimate)
+        if estimate == "educational directional scenario"
+        else estimate
+    )
+    single_active = bool(payload.get("single_active_scenario"))
+    single_active_label = t(
+        "what_if.api_text.single_active_yes" if single_active else "what_if.api_text.single_active_no",
+        locale=locale,
+        default="yes" if single_active else "no",
+    )
+    return t(
+        "what_if.api_text.request_assumptions",
+        locale=locale,
+        default="Request assumptions: interface {interface}; estimate {estimate}; single active scenario: {single_active}.",
+        interface=str(payload.get("interface") or ""),
+        estimate=estimate_label,
+        single_active=single_active_label,
+    )
+
+
+def _format_compact_number(value: float | int, *, locale: str) -> str:
+    number = float(value)
+    decimals = 0 if number.is_integer() else 1
+    return format_number(number, decimals=decimals, locale=locale)
 
 
 def _add_day_separators(fig: go.Figure, frame: pd.DataFrame, timezone_name: str) -> None:
@@ -946,11 +1226,11 @@ def _range_tuple(value: Any) -> tuple[float, float]:
     return 0.0, 0.0
 
 
-def _format_signed_energy(value_mwh: float) -> str:
+def _format_signed_energy(value_mwh: float, *, locale: str = "en") -> str:
     value = float(value_mwh or 0.0)
     if abs(value) >= 1000:
-        return f"{value / 1000.0:+,.1f} GWh"
-    return f"{value:+,.0f} MWh"
+        return f"{format_number(value / 1000.0, decimals=1, signed=True, locale=locale)} GWh"
+    return f"{format_number(value, signed=True, locale=locale)} MWh"
 
 
 def chain_markup(steps: list[tuple[str, str]]) -> str:

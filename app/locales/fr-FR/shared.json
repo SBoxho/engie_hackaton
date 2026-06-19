@@ -1,0 +1,163 @@
+{
+  "app": {
+    "name": "Energy Pulse France"
+  },
+  "format": {
+    "unavailable": "Indisponible"
+  },
+  "about": {
+    "body_1": "Ce prototype de décision pour hackathon aide le grand public à comprendre l'électricité. Il combine les observations RTE/ODRE, le contexte EcoWatt, la météo et des solutions de secours explicites pour expliquer séparément la demande, la production, les échanges et la tension du système.",
+    "body_2": "Limites : ce n'est pas une prévision opérationnelle de RTE, un signal tarifaire, un outil de dispatching ou une méthode carbone vérifiée. Les données historiques d'exemple sont séparées du contexte opérationnel en direct.",
+    "title": "À propos du projet"
+  },
+  "aria": {
+    "provenance": "Provenance",
+    "status": "Statut"
+  },
+  "context": {
+    "aria_label": "Contexte de l'application",
+    "current_weather": "Météo actuelle",
+    "last_update": "Dernière mise à jour",
+    "live_weather_source": "En direct · {location} · {source}",
+    "scope": "Périmètre",
+    "selected_sublabel": "heure sélectionnée {timestamp}",
+    "selected_time": "Heure sélectionnée",
+    "wind": "vent {value} km/h"
+  },
+  "footer": {
+    "built_for": "Conçu pour le hackathon"
+  },
+  "header": {
+    "language_region": "Langue d'affichage"
+  },
+  "language": {
+    "label": "Langue",
+    "options": {
+      "en": "EN",
+      "fr": "FR"
+    }
+  },
+  "mode": {
+    "forecast": "Prévision",
+    "live": "En direct",
+    "replay": "Contexte démo",
+    "simulation": "Simulation"
+  },
+  "notices": {
+    "delayed_source_data": {
+      "body": "L'API d'état actuel indique que le dernier enregistrement source est en retard.",
+      "title": "Données source en retard"
+    },
+    "demo_fixture_mode": {
+      "body": "Ces données historiques d'exemple respectent le contrat, mais ne doivent pas être lues comme des opérations en direct.",
+      "title": "Mode démo"
+    },
+    "optional_source_unavailable": {
+      "body": "{count} champ(s) de source optionnelle sont indisponibles.",
+      "title": "Source optionnelle indisponible"
+    },
+    "partial_data": {
+      "body": "{count} champ(s) sont indisponibles et signalés dans le contrat typé.",
+      "title": "Données partielles"
+    },
+    "stale_data": {
+      "body": "Le dernier contrat typé signale que ces données ne sont plus fraîches.",
+      "title": "Données périmées"
+    },
+    "typed_twin_contract_unavailable": {
+      "body": "La page utilise le contexte public historique pendant que la réponse typée est indisponible.",
+      "title": "Contrat du jumeau typé indisponible"
+    },
+    "using_last_known_good_data": {
+      "body": "Le rafraîchissement en direct n'a pas fourni de paquet source complet et frais.",
+      "title": "Dernières données valides utilisées"
+    }
+  },
+  "nav": {
+    "next_48h": "Prochaines 48 h",
+    "now": "En direct",
+    "technical_lab": "Labo technique",
+    "what_if": "Et si ?"
+  },
+  "provenance": {
+    "definition": {
+      "fallback": "Solution de secours utilisée lorsque la donnée préférée est indisponible.",
+      "model": "Estimation du modèle issue de la couche analytique Energy Pulse.",
+      "modelled": "Contexte d'équilibre estimé par la couche analytique de l'application.",
+      "observed": "Mesure publique observée.",
+      "official": "Source publique officielle ou prévision officielle.",
+      "replay": "Rejeu historique ou jeu de démonstration, pas une donnée en direct.",
+      "scenario": "Résultat de scénario calculé à partir des hypothèses choisies.",
+      "unavailable": "La source ou le champ est indisponible et n'a pas été remplacé par zéro."
+    },
+    "label": {
+      "fallback": "Secours",
+      "model": "Estimation",
+      "modelled": "État estimé",
+      "observed": "Observé",
+      "official": "Officiel",
+      "replay": "Rejeu",
+      "scenario": "Scénario",
+      "unavailable": "Indisponible"
+    }
+  },
+  "provenance_drawer": {
+    "title": "Provenance des données"
+  },
+  "sources": {
+    "visible": "Sources visibles"
+  },
+  "state_kind": {
+    "empty": "Vide",
+    "error": "Erreur",
+    "fallback": "Secours",
+    "loading": "Chargement",
+    "partial": "Données partielles",
+    "stale": "Données périmées"
+  },
+  "states": {
+    "loading": {
+      "body": "Récupération de la dernière réponse du contrat typé.",
+      "title": "Chargement des données"
+    }
+  },
+  "status": {
+    "blue": "Info",
+    "fallback": "Secours",
+    "good": "Bon",
+    "green": "Normal",
+    "grey": "Inconnu",
+    "high": "Élevé",
+    "info": "Info",
+    "low": "Faible",
+    "medium": "Moyen",
+    "normal": "Normal",
+    "orange": "Vigilance",
+    "red": "Élevé",
+    "unknown": "Inconnu",
+    "unavailable": "Indisponible",
+    "watch": "Vigilance",
+    "yellow": "Vigilance"
+  },
+  "terms": {
+    "default": {
+      "definition": "Terme métier utilisé par ce tableau de bord."
+    },
+    "likely_range": {
+      "definition": "L'intervalle de prévision p10 à p90. Il décrit l'incertitude et n'est pas utilisé comme facteur de tension du système.",
+      "label": "plage probable"
+    },
+    "local_generation": {
+      "definition": "Électricité produite dans la région sélectionnée ; la région reste intégrée au réseau électrique français interconnecté.",
+      "label": "production locale"
+    },
+    "modelled_balance_context": {
+      "definition": "Contexte de tension analytique documenté, distinct du signal officiel EcoWatt et non assimilable à une marge opérationnelle.",
+      "label": "état estimé du système électrique"
+    },
+    "usual_demand": {
+      "definition": "Référence historique comparable pour la même saison, le même type de jour et la même heure locale.",
+      "label": "niveau de demande habituel"
+    }
+  }
+}

@@ -128,10 +128,10 @@ def test_replay_next_48h_uses_presentation_anchored_demo_window() -> None:
 @pytest.mark.parametrize(
     ("page_path", "expected_text"),
     [
-        (None, "NOW"),
-        ("pages/next_48h.py", "NEXT 48H"),
-        ("pages/what_if.py", "WHAT IF?"),
-        ("pages/technical_lab.py", "Technical lab"),
+        (None, "En direct"),
+        ("pages/next_48h.py", "Prochaines 48 h"),
+        ("pages/what_if.py", "Et si ?"),
+        ("pages/technical_lab.py", "Labo technique"),
         ("pages/1_live_grid.py", "Live grid detail"),
     ],
 )

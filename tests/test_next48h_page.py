@@ -9,6 +9,7 @@ from streamlit.testing.v1 import AppTest
 
 from app.components.regional_map import has_meaningful_anomaly_signal, regional_anomaly_choropleth
 from app.components.public import forecast_chart
+from app.i18n import translation_keys
 from app.next48h_view import (
     choose_best_window,
     confidence_summary,
@@ -22,6 +23,10 @@ from tests.test_twin_api import NOW, service
 
 
 APP_MAIN = Path(__file__).resolve().parents[1] / "app" / "main.py"
+
+
+def test_next48h_translation_keys_match() -> None:
+    assert translation_keys("fr-FR", "next48h") == translation_keys("en", "next48h")
 
 
 def _point(
@@ -57,6 +62,14 @@ def test_selected_hour_explanation_numerically_reconciles_to_forecast() -> None:
     assert "uncertainty is shown only as the likely range" in explanation.text
 
 
+def test_selected_hour_explanation_uses_requested_locale() -> None:
+    explanation = selected_hour_explanation(_point(), locale="fr-FR")
+
+    assert "demande prévue" in explanation.text
+    assert "plage probable" in explanation.text
+    assert explanation.positive_drivers[0].name == "Hausse de prévision par rapport à l'habituel"
+
+
 def test_confidence_summary_uses_range_horizon_fallback_and_recent_error() -> None:
     summary = confidence_summary(_point(p10=46_000, p50=52_000, p90=58_000, horizon=30))
 
@@ -64,6 +77,15 @@ def test_confidence_summary_uses_range_horizon_fallback_and_recent_error() -> No
     assert {"Forecast horizon", "Interval width", "Weather disagreement", "Fallback sources", "Recent model performance"} == names
     assert summary.level in {"Low", "Medium"}
     assert any(factor.status == "watch" for factor in summary.factors)
+
+
+def test_confidence_summary_uses_requested_locale() -> None:
+    summary = confidence_summary(_point(p10=46_000, p50=52_000, p90=58_000, horizon=30), locale="fr-FR")
+
+    names = {factor.name for factor in summary.factors}
+    assert {"Horizon de prévision", "Largeur de l'intervalle", "Désaccord météo"} <= names
+    assert summary.level in {"Faible", "Moyen"}
+    assert "Niveau de confiance" in summary.detail
 
 
 def test_best_window_objectives_can_select_different_times() -> None:
@@ -107,6 +129,15 @@ def test_future_regional_map_frame_is_labelled_as_selected_future_state() -> Non
     assert pd.Series(available.z).notna().all()
 
 
+def test_future_regional_map_frame_uses_requested_locale() -> None:
+    snapshot = service().get_twin(from_timestamp=NOW, hours=2, region="11").snapshots[2]
+    frame = future_regional_map_frame(snapshot, locale="fr-FR")
+
+    assert not frame.empty
+    assert frame["freshness_label"].str.contains("Heure de prévision").all()
+    assert frame["source_label"].eq("Prévision de demande régionale future").all()
+
+
 def test_sparse_future_regional_map_falls_back_to_projected_all_region_signal() -> None:
     snapshot = service().get_twin(from_timestamp=NOW, hours=2, region="11").snapshots[2]
     typed_frame = future_regional_map_frame(snapshot)
@@ -146,9 +177,38 @@ def test_primary_forecast_chart_contains_required_layers() -> None:
     )
     trace_names = {trace.name for trace in figure.data}
 
-    assert {"Actual demand", "Uncertainty interval", "Usual-demand baseline", "Forecast demand", "Selected hour"} <= trace_names
+    assert {"Actual demand", "Likely range", "Usual-demand baseline", "Forecast demand", "Selected hour"} <= trace_names
     assert figure.layout.shapes
     assert any(getattr(trace, "selectedpoints", None) for trace in figure.data if trace.name == "Forecast demand")
+
+
+def test_primary_forecast_chart_uses_requested_locale() -> None:
+    history = pd.DataFrame(
+        {
+            "timestamp": pd.date_range("2026-06-18T00:00:00Z", periods=2, freq="h"),
+            "consumption_mw": [49_000, 49_400],
+        }
+    )
+    forecast = pd.DataFrame(
+        {
+            "timestamp": pd.date_range("2026-06-18T02:00:00Z", periods=2, freq="h"),
+            "p10": [49_000, 49_500],
+            "p50": [51_000, 51_500],
+            "p90": [53_000, 53_500],
+            "usual_demand_mw": [50_000, 50_300],
+            "pressure_label": ["Watch", "High"],
+            "source": ["Usual-demand baseline fallback"] * 2,
+        }
+    )
+
+    figure = forecast_chart(history, forecast, locale="fr-FR")
+    trace_names = {trace.name for trace in figure.data}
+
+    assert {"Demande observée", "Plage probable", "Référence de demande habituelle", "Demande prévue"} <= trace_names
+    forecast_trace = next(trace for trace in figure.data if trace.name == "Demande prévue")
+    assert forecast_trace.customdata[0][2] == "Vigilance"
+    assert forecast_trace.customdata[0][3] == "Référence de demande habituelle de secours"
+    assert any("juin" in str(label) for label in figure.layout.xaxis.ticktext)
 
 
 def test_next48h_page_selecting_time_updates_dependent_components(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -169,9 +229,26 @@ def test_next48h_page_selecting_time_updates_dependent_components(monkeypatch: p
     assert not app.exception
     rendered = "\n".join(str(item.value) for item in app.markdown)
     assert rendered.count(selected_label) >= 3
+    assert "Explication déterministe" in rendered
+    assert "Carte régionale future" in rendered
+    assert "contexte régional actuel" in rendered
+    assert "Production et équilibre" in rendered
+    assert any(button.label == "Heure précédente" for button in app.button)
+    assert any(button.label == "Heure suivante" for button in app.button)
+
+
+def test_next48h_page_english_locale_smoke(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_MODE", "demo")
+    monkeypatch.setenv("DEMO_ALLOW_EXTERNAL_API", "0")
+    app = AppTest.from_file(APP_MAIN, default_timeout=20)
+    app.query_params["lang"] = ["en"]
+    app.switch_page("pages/next_48h.py")
+    app.run(timeout=45)
+
+    assert not app.exception
+    rendered = "\n".join(str(item.value) for item in app.markdown)
     assert "Deterministic explanation" in rendered
     assert "Future Regional Map" in rendered
-    assert "not current regional context" in rendered
     assert "Generation And Balance" in rendered
     assert any(button.label == "Previous hour" for button in app.button)
     assert any(button.label == "Next hour" for button in app.button)

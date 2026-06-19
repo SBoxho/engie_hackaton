@@ -1,0 +1,368 @@
+{
+  "header": {
+    "subtitle": "Plage de demande, meilleurs créneaux d'usage, niveau de confiance et contexte régional futur pour les deux prochains jours."
+  },
+  "time": {
+    "local_hour": "{weekday} {day} {month} {time}",
+    "window_same_day": "{weekday} {start_time}-{end_time}",
+    "window_cross_day": "{start_weekday} {start_time}-{end_weekday} {end_time}",
+    "weekdays_short": {
+      "0": "lun.",
+      "1": "mar.",
+      "2": "mer.",
+      "3": "jeu.",
+      "4": "ven.",
+      "5": "sam.",
+      "6": "dim."
+    },
+    "months_short": {
+      "1": "janv.",
+      "2": "févr.",
+      "3": "mars",
+      "4": "avr.",
+      "5": "mai",
+      "6": "juin",
+      "7": "juil.",
+      "8": "août",
+      "9": "sept.",
+      "10": "oct.",
+      "11": "nov.",
+      "12": "déc."
+    }
+  },
+  "errors": {
+    "context_title": "Contexte de prévision indisponible",
+    "context_body": "Le tableau de bord public n'a pas pu charger de contexte de prévision typé ou historique.",
+    "forecast_title": "Prévision indisponible",
+    "forecast_body": "Aucun point de prévision n'est disponible pour les prochaines 48 h.",
+    "regional_title": "Prévision régionale indisponible",
+    "regional_body": "L'heure future sélectionnée ne dispose d'aucune allocation régionale de demande."
+  },
+  "sections": {
+    "forecast": {
+      "kicker": "Prévision",
+      "title": "Prévision de demande sur 48 h",
+      "copy": "L'horodatage sélectionné dans ce graphique est réutilisé par les explications, le niveau de confiance, la carte régionale, la production et l'équilibre."
+    },
+    "selected_hour": {
+      "kicker": "Heure sélectionnée",
+      "title": "Pourquoi {hour} est haute ou basse"
+    },
+    "confidence": {
+      "kicker": "Niveau de confiance",
+      "title": "Qu'est-ce qui soutient cette prévision ?"
+    },
+    "regional": {
+      "kicker": "Carte régionale future",
+      "title": "Anomalie de demande régionale à {hour}",
+      "copy": "Il s'agit d'une allocation prévisionnelle pour l'heure sélectionnée. Ce n'est ni le contexte régional actuel ni un statut d'adéquation régionale."
+    },
+    "generation_balance": {
+      "kicker": "Production et équilibre",
+      "title": "Contexte de l'heure sélectionnée à {hour}"
+    }
+  },
+  "viz": {
+    "title": "Demande observée, prévision P50, plage probable et référence de demande habituelle",
+    "detail": "Le ruban d'incertitude correspond à la plage probable p10-p90. Il n'est pas traité comme un facteur de pression positif ou négatif.",
+    "source": "RTE eco2mix, référence de demande habituelle et contexte typé du jumeau"
+  },
+  "controls": {
+    "forecast_hour": "Heure de prévision",
+    "previous_hour": "Heure précédente",
+    "next_hour": "Heure suivante",
+    "selected_forecast_timestamp": "Horodatage de prévision sélectionné : {timestamp}",
+    "forecast_data": "Données de prévision",
+    "best_window_objective": "Objectif du meilleur créneau",
+    "objective_caption": "Ces objectifs peuvent produire des horaires différents, car le contexte d'équilibre de la demande et le contexte carbone sont des signaux distincts.",
+    "region_detail": "Détail régional"
+  },
+  "objectives": {
+    "lowest_balance": "Contexte d'équilibre le plus bas",
+    "lowest_carbon": "Carbone le plus bas",
+    "combined": "Meilleur créneau combiné"
+  },
+  "summary": {
+    "peak": {
+      "label": "Pic attendu",
+      "detail": "Plage {range}. {delta}",
+      "unavailable_value": "Indisponible",
+      "unavailable_detail": "Aucun pic n'a pu être calculé."
+    },
+    "best_window": {
+      "label": "Meilleur créneau d'usage",
+      "detail": "{explanation} Demande moyenne {demand}.",
+      "unavailable_value": "Indisponible",
+      "unavailable_detail": "Aucun créneau de prévision éligible n'est disponible."
+    },
+    "confidence": {
+      "label": "Niveau de confiance",
+      "detail": "Heure sélectionnée {hour}. {detail}"
+    }
+  },
+  "delta": {
+    "at_peak": "L'heure sélectionnée correspond au pic attendu.",
+    "after_peak": "L'heure sélectionnée est {hours} h après le pic attendu.",
+    "before_peak": "L'heure sélectionnée est {hours} h avant le pic attendu."
+  },
+  "terms": {
+    "intro": "Termes : {usual} et {range}.",
+    "fallback_definition": "Terme métier utilisé par ce tableau de bord.",
+    "usual_demand": {
+      "term": "demande habituelle",
+      "definition": "Référence issue d'heures comparables pour la même saison, le même type de jour et la même heure locale."
+    },
+    "likely_range": {
+      "term": "plage probable",
+      "definition": "Intervalle de prévision p10 à p90. Il décrit l'incertitude et n'est pas utilisé comme entrée de pression d'équilibre."
+    }
+  },
+  "selected_metrics": {
+    "usual_demand": {
+      "label": "Demande habituelle",
+      "detail": "Référence issue d'historiques comparables."
+    },
+    "positive_drivers": {
+      "label": "Facteurs positifs",
+      "detail": "Hausse de demande au-dessus de l'habituel pour cette heure sélectionnée."
+    },
+    "negative_drivers": {
+      "label": "Facteurs négatifs",
+      "detail": "Allègement de demande sous l'habituel pour cette heure sélectionnée."
+    },
+    "final_expected_demand": {
+      "label": "Demande finale prévue",
+      "detail": "Plage {range} ; erreur de réconciliation {error}."
+    }
+  },
+  "selected_explanation": {
+    "title": "Explication déterministe",
+    "label": "Réconciliée numériquement",
+    "drivers": {
+      "lift_name": "Hausse de prévision par rapport à l'habituel",
+      "lift_detail": "La prévision sélectionnée est au-dessus de la référence de demande habituelle pour une heure comparable.",
+      "easing_name": "Baisse de prévision par rapport à l'habituel",
+      "easing_detail": "La prévision sélectionnée est sous la référence de demande habituelle pour une heure comparable."
+    },
+    "direction": {
+      "near": "proche de son niveau habituel",
+      "above": "{delta} au-dessus de l'habituel",
+      "below": "{delta} sous l'habituel"
+    },
+    "text": "À {hour}, la demande prévue est de {expected}, {direction}. La réconciliation déterministe correspond à la demande habituelle plus les facteurs positifs moins les facteurs négatifs ; l'incertitude est affichée uniquement comme plage probable."
+  },
+  "weather": {
+    "unavailable_headline": "Météo indisponible",
+    "unavailable_detail": "Le contexte météo est indisponible pour cet instantané.",
+    "headline": {
+      "cold": "Hausse de demande liée au froid",
+      "heat": "Hausse de demande liée à la chaleur",
+      "wind": "Contexte de production éolienne",
+      "mild": "Météo douce"
+    },
+    "detail": "{temperature}, vent {wind}, nébulosité {cloud}.",
+    "forecast_label": "Prévision à {hour}",
+    "forecast_detail": "{detail} Prévision horaire · {location} · {source}.",
+    "live_label": "Météo en direct (maintenant)",
+    "live_detail": "{detail} Relevé en direct · {location} · {source}.",
+    "bundled_label": "Instantané météo inclus"
+  },
+  "confidence": {
+    "levels": {
+      "high": "Élevé",
+      "medium": "Moyen",
+      "low": "Faible"
+    },
+    "detail": "Niveau de confiance {level} fondé sur l'horizon, la largeur de l'intervalle, la provenance de la route et les erreurs récentes.",
+    "factors": {
+      "horizon": {
+        "name": "Horizon de prévision",
+        "value": "{hours} h",
+        "detail": "Les horizons plus longs portent davantage d'incertitude."
+      },
+      "interval_width": {
+        "name": "Largeur de l'intervalle",
+        "value": "{width} ({ratio})",
+        "detail": "Largeur de la plage probable p10-p90 par rapport à la demande prévue."
+      },
+      "weather_disagreement": {
+        "name": "Désaccord météo",
+        "value": "Indisponible",
+        "detail": "Aucun artefact de désaccord météo multi-fournisseur n'est associé à cette route."
+      },
+      "fallback_sources": {
+        "name": "Sources de secours",
+        "fallback_value": "Route de secours",
+        "model_value": "Route modèle ou officielle"
+      },
+      "recent_performance": {
+        "name": "Performance récente du modèle",
+        "unavailable_value": "Indisponible",
+        "detail": "Métrique d'erreur récente par route disponible pour la page."
+      }
+    }
+  },
+  "regional": {
+    "unavailable_title": "Contexte régional futur indisponible",
+    "unavailable_detail": "Aucune prévision régionale pour l'heure sélectionnée n'a été renvoyée par le jumeau typé.",
+    "card_label": "Prévision régionale",
+    "detail": "Demande prévue {forecast} contre demande habituelle {usual} ({difference}).",
+    "interpretation_title": "Interprétation régionale",
+    "interpretation_label": "Allocation de demande uniquement",
+    "typed_freshness": "Heure de prévision {hour}",
+    "typed_source": "Prévision de demande régionale future",
+    "typed_unavailable": "Allocation future de demande régionale indisponible.",
+    "typed_note": "Allocation régionale de demande pour l'heure sélectionnée issue du jumeau typé.",
+    "projected_source": "Allocation régionale future projetée de la demande",
+    "projected_unavailable": "Allocation régionale projetée de la demande indisponible.",
+    "projected_method": "Parts de demande régionales actuelles projetées sur l'heure de prévision nationale sélectionnée.",
+    "projected_note": "La demande régionale projetée est uniquement contextuelle ; ce n'est ni une mesure actuelle ni un statut d'adéquation régionale."
+  },
+  "generation": {
+    "mix": {
+      "label": "Mix de production estimé",
+      "model_detail": "Nucléaire, éolien, solaire et sources flexibles résiduelles/importations pour l'heure future sélectionnée.",
+      "fallback_detail": "Dernier mix de production repris comme hypothèse de secours explicite pour la demande future sélectionnée."
+    },
+    "availability": {
+      "label": "Contexte de disponibilité",
+      "model_detail": "Production nucléaire attendue {output}.",
+      "fallback_detail": "Aucun flux d'indisponibilité aligné pour l'heure sélectionnée ; la dernière disponibilité sert seulement de contexte de secours."
+    },
+    "balance": {
+      "label": "Contexte d'équilibre",
+      "model_detail": "Score {score} ; marge d'offre {margin}.",
+      "fallback_detail": "Disponibilité statique de secours ; marge d'offre {margin}."
+    },
+    "official": {
+      "label": "Signal officiel",
+      "unavailable_value": "EcoWatt futur indisponible",
+      "unavailable_detail": "Aucun signal officiel aligné n'est affiché pour cette heure future sélectionnée."
+    },
+    "carbon": {
+      "label": "Contexte carbone",
+      "model_detail": "Estimation d'intensité carbone pour l'heure sélectionnée ; elle n'est pas une entrée d'équilibre.",
+      "fallback_detail": "La dernière intensité carbone est reprise comme contexte de secours ; elle n'est pas une entrée d'équilibre."
+    },
+    "exchange": {
+      "label": "Estimation des échanges",
+      "model_detail": "Un signe positif indique des imports nets ; un signe négatif indique des exports nets.",
+      "fallback_detail": "Le dernier contexte d'échange est repris comme hypothèse de secours."
+    }
+  },
+  "expanders": {
+    "estimated_generation_mix": "Mix de production estimé",
+    "how_calculated": {
+      "label": "Comment ce résultat est-il calculé ?",
+      "paragraph_1": "La page utilise le jumeau typé du système électrique uniquement lorsque son origine de prévision est alignée avec le dernier horodatage réel ou démo de la page. Sinon, elle utilise la prévision alignée sur 48 h et étiquette le contexte régional, la production, l'équilibre et le carbone projetés comme secours.",
+      "paragraph_2": "La demande est affichée en p50 avec une plage probable p10-p90 et une référence de demande habituelle. L'explication de l'heure sélectionnée réconcilie p50 comme demande habituelle plus facteurs positifs moins facteurs négatifs.",
+      "paragraph_3": "Le sélecteur de meilleur créneau évalue des fenêtres glissantes de trois heures. Les objectifs équilibre, carbone et combiné peuvent choisir des horaires différents car ils optimisent des quantités différentes."
+    },
+    "reliability_model_card": {
+      "label": "Fiabilité et fiche modèle",
+      "limitations_label": "Limites connues du modèle :"
+    },
+    "data_sources": {
+      "label": "Sources de données et fraîcheur",
+      "national": "Électricité nationale : {source}",
+      "regional": "Électricité régionale : {source}",
+      "map": "Géométrie de la carte : {source}",
+      "selected_hour": "Heure de prévision sélectionnée : {timestamp}",
+      "unaligned_twin": "Des instantanés de jumeau typé étaient disponibles mais non alignés avec l'origine de prévision la plus récente de cette page ; le contexte de l'heure sélectionnée est donc affiché avec des étiquettes de secours explicites.",
+      "snapshot_updated": "Instantané du jumeau sélectionné mis à jour : {timestamp}",
+      "optional_sources": "Sources optionnelles indisponibles :"
+    },
+    "about": {
+      "label": "À propos du projet",
+      "paragraph_1": "Ce prototype d'aide à la décision hackathon est conçu pour la sensibilisation publique à l'électricité. Il combine observations électriques RTE/ODRE, contexte EcoWatt, caractéristiques météo et secours transparents pour expliquer séparément la demande, l'offre et la pression.",
+      "paragraph_2": "Limites : il ne s'agit pas d'une prévision opérationnelle RTE, d'un signal tarifaire, d'un outil de dispatching ou d'une méthode carbone vérifiée. Les données historiques d'exemple sont séparées du contexte opérationnel en direct."
+    },
+    "provenance": {
+      "label": "Provenance des données"
+    }
+  },
+  "tables": {
+    "forecast": {
+      "time": "Heure",
+      "p10": "P10",
+      "p50": "P50",
+      "p90": "P90",
+      "usual_demand": "Demande habituelle",
+      "balance_context": "Contexte d'équilibre",
+      "carbon": "Carbone",
+      "route": "Route",
+      "unknown": "Inconnu",
+      "unavailable": "Indisponible"
+    },
+    "generation": {
+      "component": "Composant",
+      "estimate": "Estimation",
+      "provenance": "Provenance",
+      "formula": "Formule",
+      "fallback_provenance": "dernier instantané de secours",
+      "fallback_formula": "Dernier mix observé/rejoué repris comme contexte de secours."
+    },
+    "reliability": {
+      "forecast_route": "Route de prévision",
+      "hours": "Heures"
+    }
+  },
+  "best_window": {
+    "explanations": {
+      "lowest_balance": "Score d'équilibre moyen le plus bas sur le créneau.",
+      "lowest_carbon": "Contexte moyen d'intensité carbone le plus bas sur le créneau.",
+      "combined": "Score combiné équilibrant contexte d'équilibre de l'application, carbone et demande."
+    }
+  },
+  "chart": {
+    "actual_demand": "Demande observée",
+    "likely_range": "Plage probable",
+    "usual_baseline": "Référence de demande habituelle",
+    "forecast_demand": "Demande prévue",
+    "selected_hour": "Heure sélectionnée",
+    "now": "Maintenant",
+    "p50": "P50",
+    "status": "Statut",
+    "route": "Route",
+    "demand_hover": "{label} : {value}",
+    "axis_y": "MW"
+  },
+  "status": {
+    "normal": "Normal",
+    "watch": "Vigilance",
+    "high": "Élevé",
+    "green": "Vert",
+    "orange": "Orange",
+    "red": "Rouge",
+    "unknown": "Inconnu",
+    "no_recommendation": "Aucune recommandation"
+  },
+  "sources": {
+    "demand_forecast": "Prévision de demande",
+    "usual_fallback": "Référence de demande habituelle de secours",
+    "fallback_route": "Route de secours",
+    "unsupported_route": "Route non prise en charge"
+  },
+  "provenance_kinds": {
+    "latest_snapshot_fallback": "dernier instantané de secours",
+    "fallback": "secours",
+    "modelled": "modélisé",
+    "modelled_estimate": "estimation modélisée",
+    "official": "officiel",
+    "observed": "observé"
+  },
+  "components": {
+    "nuclear_expected_output_or_availability": "Production nucléaire attendue",
+    "wind": "Éolien",
+    "solar": "Solaire",
+    "residual_flexible_sources_and_imports": "Sources flexibles résiduelles et imports"
+  },
+  "provenance_items": {
+    "national": "Électricité nationale",
+    "regional": "Électricité régionale",
+    "forecast_run": "Exécution de prévision",
+    "selected_timestamp": "Horodatage sélectionné",
+    "aligned_legacy_forecast": "Prévision historique alignée",
+    "unavailable": "Indisponible"
+  }
+}

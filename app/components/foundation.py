@@ -8,6 +8,7 @@ from typing import Any, Iterable, Literal
 import streamlit as st
 
 from app.formatting import format_age_seconds, format_timestamp
+from app.i18n import current_locale, mode_label, normalize_locale, t
 from app.state import AppState
 from src.contracts.energy_twin import (
     CurrentStateResponse,
@@ -21,23 +22,7 @@ from src.contracts.energy_twin import (
 from src.data_sources.rte_eco2mix_regional import REGION_NAMES
 
 
-PROVENANCE_DEFINITIONS = {
-    "official": "Official public source or official forecast.",
-    "observed": "Observed public measurement.",
-    "model": "Model estimate from the Energy Pulse analytical layer.",
-    "modelled": "App balance context from the analytical layer.",
-    "scenario": "Scenario output from user-selected assumptions.",
-    "fallback": "Fallback route used because preferred data was unavailable.",
-    "replay": "Historical replay or demo fixture, not live data.",
-    "unavailable": "The source or field is unavailable and has not been replaced with zero.",
-}
-
-TERM_DEFINITIONS = {
-    "usual demand": "A comparable-history baseline for the same season, day type, and local hour.",
-    "local generation": "Electricity generated in the selected region; the region remains part of the connected French grid.",
-    "likely range": "The p10 to p90 forecast interval. It describes uncertainty and is not used as a balance-pressure input.",
-    "modelled balance context": "A documented analytical pressure context, separate from official EcoWatt and not an operational reserve margin.",
-}
+PROVENANCE_KINDS = {"official", "observed", "model", "modelled", "scenario", "fallback", "replay", "unavailable"}
 
 StateKind = Literal["loading", "empty", "stale", "fallback", "partial", "error"]
 
@@ -49,15 +34,16 @@ class TrustNotice:
     body: str
 
 
-def provenance_badge_html(kind: str, label: str | None = None) -> str:
+def provenance_badge_html(kind: str, label: str | None = None, *, locale: str | None = None) -> str:
     normalized = _normalize_provenance_kind(kind)
     if normalized == "modelled":
         return ""
-    text = label or _provenance_label(normalized)
-    definition = PROVENANCE_DEFINITIONS[normalized]
+    resolved_locale = _ui_locale(locale)
+    text = label or _provenance_label(normalized, locale=resolved_locale)
+    definition = t(f"shared.provenance.definition.{normalized}", locale=resolved_locale)
     return (
         f'<span class="ep-provenance ep-provenance-{normalized}" role="status" '
-        f'aria-label="Provenance: {html.escape(text)}. {html.escape(definition)}">'
+        f'aria-label="{html.escape(t("shared.aria.provenance", locale=resolved_locale))}: {html.escape(text)}. {html.escape(definition)}">'
         f'<span class="ep-provenance-key">{html.escape(text)}</span>'
         "</span>"
     )
@@ -103,42 +89,63 @@ def status_text_html(label: str, detail: str, *, status: str = "info") -> str:
     )
 
 
-def trust_notice_html(kind: StateKind, title: str, body: str) -> str:
+def trust_notice_html(kind: StateKind, title: str, body: str, *, locale: str | None = None) -> str:
+    resolved_locale = _ui_locale(locale)
     role = "alert" if kind == "error" else "status"
     return (
         f'<div class="ep-trust-state ep-trust-{kind}" role="{role}" '
         f'aria-label="{html.escape(title)}: {html.escape(body)}">'
-        f'<div class="ep-trust-label">{html.escape(_state_label(kind))}</div>'
+        f'<div class="ep-trust-label">{html.escape(_state_label(kind, locale=resolved_locale))}</div>'
         f'<div><div class="ep-trust-title">{html.escape(title)}</div>'
         f'<div class="ep-trust-body">{html.escape(body)}</div></div></div>'
     )
 
 
-def render_trust_notices(notices: Iterable[TrustNotice]) -> None:
-    markup = "".join(trust_notice_html(item.kind, item.title, item.body) for item in notices)
+def render_trust_notices(notices: Iterable[TrustNotice], *, locale: str | None = None) -> None:
+    resolved_locale = _ui_locale(locale)
+    markup = "".join(
+        trust_notice_html(item.kind, *_localized_notice_text(item, resolved_locale), locale=resolved_locale)
+        for item in notices
+    )
     if markup:
         st.markdown(f'<div class="ep-trust-stack">{markup}</div>', unsafe_allow_html=True)
 
 
-def loading_state(title: str = "Loading data", body: str = "Retrieving the latest typed contract response.") -> None:
-    st.markdown(trust_notice_html("loading", title, body), unsafe_allow_html=True)
+def loading_state(title: str | None = None, body: str | None = None, *, locale: str | None = None) -> None:
+    resolved_locale = _ui_locale(locale)
+    st.markdown(
+        trust_notice_html(
+            "loading",
+            title or t("shared.states.loading.title", locale=resolved_locale),
+            body or t("shared.states.loading.body", locale=resolved_locale),
+            locale=resolved_locale,
+        ),
+        unsafe_allow_html=True,
+    )
 
 
 def empty_state(title: str, body: str) -> None:
     st.markdown(trust_notice_html("empty", title, body), unsafe_allow_html=True)
 
 
-def error_state(title: str, body: str) -> None:
-    st.markdown(trust_notice_html("error", title, body), unsafe_allow_html=True)
+def error_state(title: str, body: str, *, locale: str | None = None) -> None:
+    st.markdown(trust_notice_html("error", title, body, locale=_ui_locale(locale)), unsafe_allow_html=True)
 
 
-def term_tooltip_html(term: str) -> str:
+def term_tooltip_html(term: str, *, locale: str | None = None) -> str:
+    resolved_locale = _ui_locale(locale)
     key = term.strip().lower()
-    definition = TERM_DEFINITIONS.get(key, "Domain term used by this dashboard.")
+    term_key = key.replace(" ", "_").replace("-", "_")
+    definition = t(
+        f"shared.terms.{term_key}.definition",
+        locale=resolved_locale,
+        default=t("shared.terms.default.definition", locale=resolved_locale),
+    )
+    label = t(f"shared.terms.{term_key}.label", locale=resolved_locale, default=term)
     return (
         f'<span class="ep-term" tabindex="0" role="note" '
-        f'aria-label="{html.escape(term)}: {html.escape(definition)}">'
-        f'<abbr title="{html.escape(definition)}">{html.escape(term)}</abbr>'
+        f'aria-label="{html.escape(label)}: {html.escape(definition)}">'
+        f'<abbr title="{html.escape(definition)}">{html.escape(label)}</abbr>'
         f'<span class="ep-term-popover" aria-hidden="true">{html.escape(definition)}</span></span>'
     )
 
@@ -155,7 +162,7 @@ def render_context_bar(
 ) -> None:
     last_update = _last_update(twin, current_state)
     selected_time = state.selected_timestamp or _selected_time(twin, current_state)
-    mode_label = _mode_label(state.mode)
+    mode_text = mode_label(state.mode, locale=state.locale)
     scope = REGION_NAMES.get(state.selected_region, state.selected_region)
     provenance_kinds = provenance_kinds_from_twin(twin) if twin is not None else provenance_kinds_from_current_state(current_state)
     if hide_replay_badge:
@@ -167,23 +174,23 @@ def render_context_bar(
         # provenance badges) can suppress the bar-level Fallback pill to keep
         # the header focused on the forecast.
         provenance_kinds = [kind for kind in provenance_kinds if kind != "fallback"]
-    badges = "".join(provenance_badge_html(kind) for kind in provenance_kinds)
-    age = _age_text(current_state)
+    badges = "".join(provenance_badge_html(kind, locale=state.locale) for kind in provenance_kinds)
+    age = _age_text(current_state, locale=state.locale)
     time_label, time_value, time_sublabel = _context_time_slot(
-        selected_time, weather, timezone_name=timezone_name
+        selected_time, weather, timezone_name=timezone_name, locale=state.locale
     )
     time_sublabel_html = (
         f"<small>{html.escape(time_sublabel)}</small>" if time_sublabel else ""
     )
     st.markdown(
         f"""
-        <div class="ep-context-bar" aria-label="Application context">
+        <div class="ep-context-bar" aria-label="{html.escape(t("shared.context.aria_label", locale=state.locale))}">
           <div class="ep-context-main">
-            <div class="ep-context-mode">{html.escape(mode_label)}</div>
+            <div class="ep-context-mode">{html.escape(mode_text)}</div>
           </div>
-          <div class="ep-context-item"><span>Scope</span><strong>{html.escape(scope)}</strong></div>
+          <div class="ep-context-item"><span>{html.escape(t("shared.context.scope", locale=state.locale))}</span><strong>{html.escape(scope)}</strong></div>
           <div class="ep-context-item"><span>{html.escape(time_label)}</span><strong>{html.escape(time_value)}</strong>{time_sublabel_html}</div>
-          <div class="ep-context-item"><span>Last update</span><strong>{html.escape(format_timestamp(last_update, timezone_name=timezone_name))}</strong><small>{html.escape(age)}</small></div>
+          <div class="ep-context-item"><span>{html.escape(t("shared.context.last_update", locale=state.locale))}</span><strong>{html.escape(format_timestamp(last_update, timezone_name=timezone_name, locale=state.locale))}</strong><small>{html.escape(age)}</small></div>
           <div class="ep-context-badges">{badges}</div>
         </div>
         """,
@@ -196,6 +203,7 @@ def _context_time_slot(
     weather: dict[str, Any] | None,
     *,
     timezone_name: str,
+    locale: str,
 ) -> tuple[str, str, str]:
     """Decide the label/value/sublabel for the selected-time slot.
 
@@ -204,29 +212,31 @@ def _context_time_slot(
     sublabel so it stays visible). Otherwise the original behavior is
     preserved exactly.
     """
-    timestamp_text = format_timestamp(selected_time, timezone_name=timezone_name)
+    timestamp_text = format_timestamp(selected_time, timezone_name=timezone_name, locale=locale)
     if not weather:
-        return "Selected time", timestamp_text, ""
+        return t("shared.context.selected_time", locale=locale), timestamp_text, ""
     temp = weather.get("temperature_c")
     wind = weather.get("wind_kmh")
     if temp is None and wind is None:
-        return "Selected time", timestamp_text, ""
+        return t("shared.context.selected_time", locale=locale), timestamp_text, ""
     parts: list[str] = []
     if temp is not None:
-        parts.append(f"{float(temp):.0f} °C")
+        from app.formatting import format_temperature
+
+        parts.append(format_temperature(temp, locale=locale))
     if wind is not None:
-        parts.append(f"wind {float(wind):.0f} km/h")
+        parts.append(t("shared.context.wind", locale=locale, value=f"{float(wind):.0f}"))
     weather_text = ", ".join(parts)
     is_live = bool(weather.get("is_live"))
     location = weather.get("location") or "Paris"
     sub_bits: list[str] = []
     if is_live:
         source = weather.get("source") or "Open-Meteo"
-        sub_bits.append(f"Live · {location} · {source}")
+        sub_bits.append(t("shared.context.live_weather_source", locale=locale, location=location, source=source))
     elif location:
         sub_bits.append(location)
-    sub_bits.append(f"selected {timestamp_text}")
-    return "Current weather", weather_text, " · ".join(sub_bits)
+    sub_bits.append(t("shared.context.selected_sublabel", locale=locale, timestamp=timestamp_text))
+    return t("shared.context.current_weather", locale=locale), weather_text, " · ".join(sub_bits)
 
 
 def notices_from_contracts(twin: TwinResponse | None, current_state: CurrentStateResponse | None) -> list[TrustNotice]:
@@ -325,10 +335,10 @@ def _selected_time(twin: TwinResponse | None, current_state: CurrentStateRespons
     return None
 
 
-def _age_text(current_state: CurrentStateResponse | None) -> str:
+def _age_text(current_state: CurrentStateResponse | None, *, locale: str) -> str:
     if current_state is None:
         return ""
-    return format_age_seconds(current_state.national_context.freshness.age_seconds)
+    return format_age_seconds(current_state.national_context.freshness.age_seconds, locale=locale)
 
 
 def provenance_kinds_from_current_state(current_state: CurrentStateResponse | None) -> list[str]:
@@ -343,15 +353,6 @@ def provenance_kinds_from_current_state(current_state: CurrentStateResponse | No
     return ["observed"]
 
 
-def _mode_label(mode: DomainMode) -> str:
-    return {
-        DomainMode.LIVE: "Live",
-        DomainMode.FORECAST: "Forecast",
-        DomainMode.SIMULATION: "Simulation",
-        DomainMode.REPLAY: "Demo context",
-    }.get(mode, mode.value.title())
-
-
 def _normalize_provenance_kind(kind: str) -> str:
     lowered = str(kind).strip().lower().replace("_", "-").replace(" ", "-")
     aliases = {
@@ -362,33 +363,38 @@ def _normalize_provenance_kind(kind: str) -> str:
         "unavailable-data": "unavailable",
     }
     normalized = aliases.get(lowered, lowered)
-    if normalized not in PROVENANCE_DEFINITIONS:
+    if normalized not in PROVENANCE_KINDS:
         return "model"
     return normalized
 
 
-def _provenance_label(kind: str) -> str:
-    return {
-        "official": "Official",
-        "observed": "Observed",
-        "model": "Model estimate",
-        "modelled": "Balance context",
-        "scenario": "Scenario",
-        "fallback": "Fallback",
-        "replay": "Replay",
-        "unavailable": "Unavailable",
-    }[kind]
+def _provenance_label(kind: str, *, locale: str) -> str:
+    return t(f"shared.provenance.label.{kind}", locale=locale)
 
 
-def _state_label(kind: StateKind) -> str:
-    return {
-        "loading": "Loading",
-        "empty": "Empty",
-        "stale": "Stale data",
-        "fallback": "Fallback",
-        "partial": "Partial data",
-        "error": "Error",
-    }[kind]
+def _state_label(kind: StateKind, *, locale: str) -> str:
+    return t(f"shared.state_kind.{kind}", locale=locale)
+
+
+def _localized_notice_text(notice: TrustNotice, locale: str) -> tuple[str, str]:
+    key = str(notice.title).strip().lower().replace("-", "_").replace(" ", "_")
+    title = t(f"shared.notices.{key}.title", locale=locale, default=notice.title)
+    body = t(f"shared.notices.{key}.body", locale=locale, default=notice.body)
+    if "{count}" in body:
+        body = body.format(count=_first_number(notice.body))
+    return title, body
+
+
+def _first_number(text: str) -> str:
+    for token in str(text).replace("(", " ").split():
+        stripped = token.strip(".,")
+        if stripped.isdigit():
+            return stripped
+    return ""
+
+
+def _ui_locale(locale: str | None) -> str:
+    return normalize_locale(locale or current_locale())
 
 
 def _unique(values: Iterable[str]) -> list[str]:
