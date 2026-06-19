@@ -1,0 +1,37 @@
+{
+  "total_count": 2,
+  "results": [
+    {
+      "date_heure": "2026-06-17T10:00:00+00:00",
+      "perimetre": "Ile-de-France",
+      "consommation": 10000,
+      "nucleaire": 2000,
+      "eolien": 300,
+      "solaire": 200,
+      "hydraulique": 100,
+      "gaz": 400,
+      "charbon": 0,
+      "fioul": 0,
+      "bioenergies": 100,
+      "ech_physiques": 6900,
+      "taux_co2": 45,
+      "date_maj": "2026-06-17T10:12:00+00:00"
+    },
+    {
+      "date_heure": "2026-06-17T10:00:00+00:00",
+      "perimetre": "Bretagne",
+      "consommation": 2500,
+      "nucleaire": 0,
+      "eolien": 900,
+      "solaire": 150,
+      "hydraulique": 120,
+      "gaz": 180,
+      "charbon": 0,
+      "fioul": 0,
+      "bioenergies": 70,
+      "ech_physiques": 1080,
+      "taux_co2": 28,
+      "date_maj": "2026-06-17T10:12:00+00:00"
+    }
+  ]
+}

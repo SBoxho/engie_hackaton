@@ -1,0 +1,39 @@
+{
+  "total_count": 2,
+  "results": [
+    {
+      "date_heure": "2026-01-01T00:00:00+00:00",
+      "perimetre": "France",
+      "consommation": 52000,
+      "nucleaire": 36000,
+      "eolien": 5400,
+      "solaire": 100,
+      "hydraulique": 6300,
+      "gaz": 2100,
+      "charbon": 0,
+      "fioul": 120,
+      "bioenergies": 900,
+      "ech_physiques": -1200,
+      "taux_co2": 31,
+      "prevision_j": 52100,
+      "prevision_j1": 51900
+    },
+    {
+      "date_heure": "2026-01-01T00:15:00+00:00",
+      "perimetre": "France",
+      "consommation": 52120,
+      "nucleaire": 36020,
+      "eolien": 5420,
+      "solaire": 100,
+      "hydraulique": 6310,
+      "gaz": 2110,
+      "charbon": 0,
+      "fioul": 120,
+      "bioenergies": 900,
+      "ech_physiques": -1100,
+      "taux_co2": 32,
+      "prevision_j": 52200,
+      "prevision_j1": 52000
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "_fixture_note": "Synthetic Open-Meteo archive-shaped fixture for tests.",
+  "hourly": {
+    "time": [
+      "2024-01-15T00:00",
+      "2024-01-15T01:00"
+    ],
+    "temperature_2m": [4.2, 4.0],
+    "wind_speed_10m": [12.0, 11.5],
+    "cloud_cover": [80, 78],
+    "shortwave_radiation": [0.0, 0.0],
+    "relative_humidity_2m": [85, 86]
+  }
+}

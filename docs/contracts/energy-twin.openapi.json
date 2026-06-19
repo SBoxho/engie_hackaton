@@ -1,0 +1,3033 @@
+{
+  "components": {
+    "schemas": {
+      "BaselineDefinition": {
+        "additionalProperties": false,
+        "properties": {
+          "baseline_id": {
+            "type": "string"
+          },
+          "comparison_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "lookback_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "method": {
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "baseline_id",
+          "version",
+          "method",
+          "comparison_keys"
+        ],
+        "type": "object"
+      },
+      "CacheInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "cache_hit": {
+            "type": "boolean"
+          },
+          "cache_key": {
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "ttl_seconds": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cache_key",
+          "ttl_seconds",
+          "generated_at",
+          "expires_at",
+          "cache_hit"
+        ],
+        "type": "object"
+      },
+      "CarbonEstimate": {
+        "additionalProperties": false,
+        "properties": {
+          "included_in_balance_context": {
+            "type": "boolean"
+          },
+          "intensity": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "method": {
+            "type": "string"
+          },
+          "provenance_kind": {
+            "$ref": "#/components/schemas/EstimateProvenanceKind"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          }
+        },
+        "required": [
+          "intensity",
+          "provenance_kind",
+          "method",
+          "included_in_balance_context",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "Confidence": {
+        "enum": [
+          "high",
+          "medium",
+          "low",
+          "unavailable"
+        ],
+        "type": "string"
+      },
+      "ConfidenceAssessment": {
+        "additionalProperties": false,
+        "properties": {
+          "backtest_mae": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuantifiedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "$ref": "#/components/schemas/Confidence"
+          },
+          "interval_calibration": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "rationale": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          }
+        },
+        "required": [
+          "confidence",
+          "rationale",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "CurrentDemandContext": {
+        "additionalProperties": false,
+        "properties": {
+          "baseline_fallback_level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "baseline_id": {
+            "type": "string"
+          },
+          "baseline_method": {
+            "type": "string"
+          },
+          "baseline_sample_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "current": {
+            "$ref": "#/components/schemas/NullableMetric"
+          },
+          "difference_vs_usual_gw": {
+            "$ref": "#/components/schemas/NullableMetric"
+          },
+          "difference_vs_usual_pct": {
+            "$ref": "#/components/schemas/NullableMetric"
+          },
+          "usual": {
+            "$ref": "#/components/schemas/NullableMetric"
+          }
+        },
+        "required": [
+          "current",
+          "usual",
+          "difference_vs_usual_pct",
+          "difference_vs_usual_gw",
+          "baseline_id",
+          "baseline_method"
+        ],
+        "type": "object"
+      },
+      "CurrentGenerationMix": {
+        "additionalProperties": false,
+        "properties": {
+          "fossil_share": {
+            "$ref": "#/components/schemas/NullableMetric"
+          },
+          "renewable_share": {
+            "$ref": "#/components/schemas/NullableMetric"
+          },
+          "technologies": {
+            "items": {
+              "$ref": "#/components/schemas/GenerationTechnologyMetric"
+            },
+            "type": "array"
+          },
+          "total": {
+            "$ref": "#/components/schemas/NullableMetric"
+          }
+        },
+        "required": [
+          "total",
+          "technologies",
+          "renewable_share",
+          "fossil_share"
+        ],
+        "type": "object"
+      },
+      "CurrentMapRegion": {
+        "additionalProperties": false,
+        "properties": {
+          "availability_flag": {
+            "type": "boolean"
+          },
+          "demand_anomaly_pct": {
+            "$ref": "#/components/schemas/NullableMetric"
+          },
+          "observed_demand": {
+            "$ref": "#/components/schemas/NullableMetric"
+          },
+          "region_id": {
+            "type": "string"
+          },
+          "region_name": {
+            "type": "string"
+          },
+          "source_quality": {
+            "type": "string"
+          },
+          "usual_demand": {
+            "$ref": "#/components/schemas/NullableMetric"
+          }
+        },
+        "required": [
+          "region_id",
+          "region_name",
+          "demand_anomaly_pct",
+          "observed_demand",
+          "usual_demand",
+          "source_quality",
+          "availability_flag"
+        ],
+        "type": "object"
+      },
+      "CurrentModelledStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "calculation_inputs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "label": {
+            "type": "string"
+          },
+          "model_id": {
+            "type": "string"
+          },
+          "model_version": {
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "signal_type": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "threshold_config_version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "signal_type",
+          "status",
+          "label",
+          "model_id",
+          "model_version",
+          "calculation_inputs",
+          "threshold_config_version"
+        ],
+        "type": "object"
+      },
+      "CurrentOfficialSignal": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "signal_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "signal_type",
+          "available",
+          "status",
+          "label",
+          "timestamp",
+          "source"
+        ],
+        "type": "object"
+      },
+      "CurrentStateResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "cache": {
+            "$ref": "#/components/schemas/CacheInfo"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "map": {
+            "items": {
+              "$ref": "#/components/schemas/CurrentMapRegion"
+            },
+            "type": "array"
+          },
+          "national_context": {
+            "$ref": "#/components/schemas/NationalCurrentContext"
+          },
+          "operating_state": {
+            "$ref": "#/components/schemas/OperatingState"
+          },
+          "region": {
+            "type": "string"
+          },
+          "selected_region_context": {
+            "$ref": "#/components/schemas/RegionalCurrentContext"
+          },
+          "unavailable_fields": {
+            "items": {
+              "$ref": "#/components/schemas/UnavailableField"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "generated_at",
+          "region",
+          "operating_state",
+          "cache",
+          "national_context",
+          "selected_region_context",
+          "map",
+          "unavailable_fields"
+        ],
+        "type": "object"
+      },
+      "DataHealthResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "cache": {
+            "$ref": "#/components/schemas/CacheInfo"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "model_health": {
+            "$ref": "#/components/schemas/ModelHealth"
+          },
+          "operating_state": {
+            "$ref": "#/components/schemas/OperatingState"
+          },
+          "scenario_engine": {
+            "$ref": "#/components/schemas/ScenarioEngineHealth"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceHealth"
+            },
+            "type": "array"
+          },
+          "unavailable_fields": {
+            "items": {
+              "$ref": "#/components/schemas/UnavailableField"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "generated_at",
+          "operating_state",
+          "cache",
+          "sources",
+          "model_health",
+          "scenario_engine",
+          "unavailable_fields"
+        ],
+        "type": "object"
+      },
+      "DataProvenance": {
+        "additionalProperties": false,
+        "properties": {
+          "dataset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "event_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "fallback_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_demo": {
+            "type": "boolean"
+          },
+          "is_fallback": {
+            "type": "boolean"
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mode": {
+            "$ref": "#/components/schemas/DomainMode"
+          },
+          "name": {
+            "type": "string"
+          },
+          "replay_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "retrieved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "transformation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "update_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "source_type",
+          "name",
+          "mode",
+          "event_time",
+          "update_time"
+        ],
+        "type": "object"
+      },
+      "DataQuality": {
+        "additionalProperties": false,
+        "properties": {
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "$ref": "#/components/schemas/Confidence"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/Freshness"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "warnings": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "freshness",
+          "confidence"
+        ],
+        "type": "object"
+      },
+      "DemandContext": {
+        "additionalProperties": false,
+        "properties": {
+          "anomaly_percentage": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "baseline_definition": {
+            "$ref": "#/components/schemas/BaselineDefinition"
+          },
+          "current": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "interpretation": {
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/Scope"
+          },
+          "usual": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          }
+        },
+        "required": [
+          "current",
+          "usual",
+          "anomaly_percentage",
+          "baseline_definition",
+          "scope",
+          "interpretation"
+        ],
+        "type": "object"
+      },
+      "DomainMode": {
+        "enum": [
+          "live",
+          "forecast",
+          "simulation",
+          "replay"
+        ],
+        "type": "string"
+      },
+      "EnvironmentalMetric": {
+        "additionalProperties": false,
+        "properties": {
+          "estimate": {
+            "$ref": "#/components/schemas/NullableMetric"
+          },
+          "included_in_modelled_status": {
+            "type": "boolean"
+          },
+          "metric": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric",
+          "estimate",
+          "included_in_modelled_status",
+          "note"
+        ],
+        "type": "object"
+      },
+      "EstimateProvenanceKind": {
+        "enum": [
+          "observed",
+          "official_forecast",
+          "statistical_estimate",
+          "persistence_fallback",
+          "residual_estimate",
+          "unavailable"
+        ],
+        "type": "string"
+      },
+      "EstimatedGenerationMix": {
+        "additionalProperties": false,
+        "properties": {
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/TwinComponentEstimate"
+            },
+            "type": "array"
+          },
+          "formula": {
+            "type": "string"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "residual_bucket_name": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          },
+          "total": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          }
+        },
+        "required": [
+          "total",
+          "components",
+          "residual_bucket_name",
+          "formula",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "ExchangeEstimate": {
+        "additionalProperties": false,
+        "properties": {
+          "exports": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "imports": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "method": {
+            "type": "string"
+          },
+          "net_imports": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "provenance_kind": {
+            "$ref": "#/components/schemas/EstimateProvenanceKind"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          }
+        },
+        "required": [
+          "net_imports",
+          "imports",
+          "exports",
+          "provenance_kind",
+          "method",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "Explanation": {
+        "additionalProperties": false,
+        "properties": {
+          "caveats": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "$ref": "#/components/schemas/ConfidenceAssessment"
+          },
+          "drivers": {
+            "items": {
+              "$ref": "#/components/schemas/ExplanationDriver"
+            },
+            "type": "array"
+          },
+          "explanation_id": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "explanation_id",
+          "method",
+          "text",
+          "drivers",
+          "confidence",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "ExplanationDriver": {
+        "additionalProperties": false,
+        "properties": {
+          "contribution": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "included_in_balance_pressure": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          }
+        },
+        "required": [
+          "name",
+          "contribution",
+          "direction",
+          "included_in_balance_pressure",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "ForecastInterval": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "$ref": "#/components/schemas/ConfidenceAssessment"
+          },
+          "p10": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "p50": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "p90": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          }
+        },
+        "required": [
+          "p10",
+          "p50",
+          "p90",
+          "confidence"
+        ],
+        "type": "object"
+      },
+      "ForecastPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "balance_context": {
+            "$ref": "#/components/schemas/ModelledBalanceContext"
+          },
+          "demand": {
+            "$ref": "#/components/schemas/ForecastInterval"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Explanation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "horizon_hours": {
+            "type": "integer"
+          },
+          "route_label": {
+            "type": "string"
+          },
+          "route_source_type": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "target_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "uncertainty": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          }
+        },
+        "required": [
+          "target_time",
+          "horizon_hours",
+          "demand",
+          "balance_context",
+          "route_source_type",
+          "route_label",
+          "uncertainty"
+        ],
+        "type": "object"
+      },
+      "ForecastRun": {
+        "additionalProperties": false,
+        "properties": {
+          "generated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "horizon_hours": {
+            "type": "integer"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/DomainMode"
+          },
+          "model_card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelCard"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "origin_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ForecastPoint"
+            },
+            "type": "array"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          }
+        },
+        "required": [
+          "run_id",
+          "mode",
+          "origin_time",
+          "generated_at",
+          "horizon_hours",
+          "points",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "Freshness": {
+        "enum": [
+          "fresh",
+          "delayed",
+          "stale",
+          "unavailable"
+        ],
+        "type": "string"
+      },
+      "FreshnessStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "age_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "refresh_interval_seconds": {
+            "type": "integer"
+          },
+          "retrieved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "$ref": "#/components/schemas/OperatingState"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "state",
+          "timestamp",
+          "retrieved_at",
+          "age_seconds",
+          "refresh_interval_seconds"
+        ],
+        "type": "object"
+      },
+      "GenerationAvailabilityContext": {
+        "additionalProperties": false,
+        "properties": {
+          "announced_unavailability_components": {
+            "items": {
+              "$ref": "#/components/schemas/TwinComponentEstimate"
+            },
+            "type": "array"
+          },
+          "announced_unavailable": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "method": {
+            "type": "string"
+          },
+          "nuclear": {
+            "$ref": "#/components/schemas/TwinComponentEstimate"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          },
+          "unavailable_optional_sources": {
+            "items": {
+              "$ref": "#/components/schemas/UnavailableField"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "nuclear",
+          "announced_unavailable",
+          "announced_unavailability_components",
+          "unavailable_optional_sources",
+          "method",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "GenerationEstimate": {
+        "additionalProperties": false,
+        "properties": {
+          "power": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "share": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuantifiedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "technology": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "technology",
+          "power"
+        ],
+        "type": "object"
+      },
+      "GenerationMix": {
+        "additionalProperties": false,
+        "properties": {
+          "co2_intensity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuantifiedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "estimates": {
+            "items": {
+              "$ref": "#/components/schemas/GenerationEstimate"
+            },
+            "type": "array"
+          },
+          "fossil_share": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuantifiedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "renewable_share": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuantifiedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "total": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          }
+        },
+        "required": [
+          "total",
+          "estimates"
+        ],
+        "type": "object"
+      },
+      "GenerationTechnologyMetric": {
+        "additionalProperties": false,
+        "properties": {
+          "power": {
+            "$ref": "#/components/schemas/NullableMetric"
+          },
+          "share": {
+            "$ref": "#/components/schemas/NullableMetric"
+          },
+          "technology": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "technology",
+          "power",
+          "share"
+        ],
+        "type": "object"
+      },
+      "ModelCard": {
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "type": "string"
+          },
+          "evaluation_metrics": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "model_id": {
+            "type": "string"
+          },
+          "promoted_horizons": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/DataProvenance"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "training_period_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "training_period_start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_id",
+          "version",
+          "display_name",
+          "purpose",
+          "source_type",
+          "training_period_start",
+          "training_period_end",
+          "evaluation_metrics",
+          "promoted_horizons",
+          "provenance",
+          "quality",
+          "limitations"
+        ],
+        "type": "object"
+      },
+      "ModelHealth": {
+        "additionalProperties": false,
+        "properties": {
+          "fallback_usage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_successful_forecast_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_successful_forecast_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model_id": {
+            "type": "string"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recent_forecast_error_mae_mw": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_id",
+          "status",
+          "model_version",
+          "latest_successful_forecast_at",
+          "latest_successful_forecast_run_id",
+          "recent_forecast_error_mae_mw"
+        ],
+        "type": "object"
+      },
+      "ModelledBalanceContext": {
+        "additionalProperties": false,
+        "properties": {
+          "available_generation": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "calculation_inputs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "import_requirement": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "method": {
+            "type": "string"
+          },
+          "net_imports": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "pressure_ratio": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "supply_margin": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "threshold_config_version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "pressure_ratio",
+          "available_generation",
+          "net_imports",
+          "supply_margin",
+          "import_requirement",
+          "threshold_config_version",
+          "source",
+          "quality",
+          "calculation_inputs"
+        ],
+        "type": "object"
+      },
+      "ModelledBalanceContribution": {
+        "additionalProperties": false,
+        "properties": {
+          "component": {
+            "type": "string"
+          },
+          "contribution": {
+            "type": "number"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          },
+          "value": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "weight": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "component",
+          "value",
+          "weight",
+          "contribution",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "NationalCurrentContext": {
+        "additionalProperties": false,
+        "properties": {
+          "carbon_estimate": {
+            "$ref": "#/components/schemas/EnvironmentalMetric"
+          },
+          "demand": {
+            "$ref": "#/components/schemas/CurrentDemandContext"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessStatus"
+          },
+          "generation_mix": {
+            "$ref": "#/components/schemas/CurrentGenerationMix"
+          },
+          "modelled_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CurrentModelledStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "net_imports": {
+            "$ref": "#/components/schemas/NullableMetric"
+          },
+          "official_ecowatt_signal": {
+            "$ref": "#/components/schemas/CurrentOfficialSignal"
+          },
+          "physical_exports": {
+            "$ref": "#/components/schemas/NullableMetric"
+          },
+          "physical_imports": {
+            "$ref": "#/components/schemas/NullableMetric"
+          }
+        },
+        "required": [
+          "demand",
+          "freshness",
+          "generation_mix",
+          "physical_imports",
+          "physical_exports",
+          "net_imports",
+          "carbon_estimate",
+          "official_ecowatt_signal",
+          "modelled_status"
+        ],
+        "type": "object"
+      },
+      "NationalState": {
+        "additionalProperties": false,
+        "properties": {
+          "balance_context": {
+            "$ref": "#/components/schemas/ModelledBalanceContext"
+          },
+          "demand_context": {
+            "$ref": "#/components/schemas/DemandContext"
+          },
+          "generation_mix": {
+            "$ref": "#/components/schemas/GenerationMix"
+          },
+          "official_signal": {
+            "$ref": "#/components/schemas/OfficialSignal"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "regions": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RegionalState"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scope": {
+            "$ref": "#/components/schemas/Scope"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          }
+        },
+        "required": [
+          "scope",
+          "demand_context",
+          "generation_mix",
+          "official_signal",
+          "balance_context",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "NullableMetric": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_quality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unit": {
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "value",
+          "unit"
+        ],
+        "type": "object"
+      },
+      "OfficialSignal": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/Scope"
+          },
+          "signal_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "update_time": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "scope",
+          "status",
+          "label",
+          "signal_time",
+          "update_time",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "OperatingState": {
+        "enum": [
+          "fresh_live_data",
+          "delayed_live_data",
+          "last_known_good_fallback",
+          "source_unavailable",
+          "historical_replay"
+        ],
+        "type": "string"
+      },
+      "QuantifiedValue": {
+        "additionalProperties": false,
+        "properties": {
+          "display_unit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Unit"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "display_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "event_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "is_fallback": {
+            "type": "boolean"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          },
+          "unit": {
+            "$ref": "#/components/schemas/Unit"
+          },
+          "update_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "value",
+          "unit",
+          "event_time",
+          "update_time",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "RegionalCurrentContext": {
+        "additionalProperties": false,
+        "properties": {
+          "connected_grid_note": {
+            "type": "string"
+          },
+          "demand": {
+            "$ref": "#/components/schemas/CurrentDemandContext"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessStatus"
+          },
+          "local_generation": {
+            "$ref": "#/components/schemas/CurrentGenerationMix"
+          },
+          "net_flow": {
+            "$ref": "#/components/schemas/NullableMetric"
+          },
+          "physical_balance": {
+            "$ref": "#/components/schemas/NullableMetric"
+          },
+          "region_code": {
+            "type": "string"
+          },
+          "region_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "region_code",
+          "region_name",
+          "demand",
+          "freshness",
+          "local_generation",
+          "net_flow",
+          "physical_balance",
+          "connected_grid_note"
+        ],
+        "type": "object"
+      },
+      "RegionalDemandForecast": {
+        "additionalProperties": false,
+        "properties": {
+          "forecast": {
+            "$ref": "#/components/schemas/ForecastInterval"
+          },
+          "method": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "reconciliation_factor": {
+            "type": "number"
+          },
+          "region_code": {
+            "type": "string"
+          },
+          "region_name": {
+            "type": "string"
+          },
+          "share_of_national_p50": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          },
+          "unreconciled_p50": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "usual": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          }
+        },
+        "required": [
+          "region_code",
+          "region_name",
+          "forecast",
+          "usual",
+          "unreconciled_p50",
+          "share_of_national_p50",
+          "reconciliation_factor",
+          "method",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "RegionalState": {
+        "additionalProperties": false,
+        "properties": {
+          "demand_context": {
+            "$ref": "#/components/schemas/DemandContext"
+          },
+          "grid_context_note": {
+            "type": "string"
+          },
+          "local_generation": {
+            "$ref": "#/components/schemas/GenerationMix"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "region_code": {
+            "type": "string"
+          },
+          "region_name": {
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/Scope"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          }
+        },
+        "required": [
+          "region_code",
+          "region_name",
+          "scope",
+          "demand_context",
+          "local_generation",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "ScenarioDelta": {
+        "additionalProperties": false,
+        "properties": {
+          "baseline": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "delta": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "metric": {
+            "type": "string"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          }
+        },
+        "required": [
+          "metric",
+          "baseline",
+          "scenario",
+          "delta",
+          "explanation"
+        ],
+        "type": "object"
+      },
+      "ScenarioEngineHealth": {
+        "additionalProperties": false,
+        "properties": {
+          "assumption_version": {
+            "type": "string"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "cache_enabled": {
+            "type": "boolean"
+          },
+          "last_successful_scenario_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "available",
+          "version",
+          "assumption_version",
+          "cache_enabled"
+        ],
+        "type": "object"
+      },
+      "ScenarioEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "affected_value": {
+            "type": "string"
+          },
+          "delta": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          },
+          "end_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "event_id": {
+            "type": "string"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          },
+          "start_time": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id",
+          "event_type",
+          "start_time",
+          "end_time",
+          "affected_value",
+          "delta",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "ScenarioRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "assumption_version": {
+            "type": "string"
+          },
+          "baseline_forecast_run_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioEvent"
+            },
+            "type": "array"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/DomainMode"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "scenario_id": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          }
+        },
+        "required": [
+          "scenario_id",
+          "mode",
+          "created_at",
+          "baseline_forecast_run_id",
+          "assumption_version",
+          "events",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "ScenarioResult": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "$ref": "#/components/schemas/ConfidenceAssessment"
+          },
+          "deltas": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioDelta"
+            },
+            "type": "array"
+          },
+          "forecast_points": {
+            "items": {
+              "$ref": "#/components/schemas/ForecastPoint"
+            },
+            "type": "array"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "request": {
+            "$ref": "#/components/schemas/ScenarioRequest"
+          },
+          "result_id": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          }
+        },
+        "required": [
+          "result_id",
+          "request",
+          "generated_at",
+          "forecast_points",
+          "deltas",
+          "confidence",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "Scope": {
+        "enum": [
+          "national",
+          "regional"
+        ],
+        "type": "string"
+      },
+      "SourceHealth": {
+        "additionalProperties": false,
+        "properties": {
+          "adapter_failures": {
+            "type": "integer"
+          },
+          "circuit_breaker_state": {
+            "type": "string"
+          },
+          "fallback_records": {
+            "type": "integer"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/FreshnessStatus"
+          },
+          "latest_successful_fetch_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "missing_intervals": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "operating_state": {
+            "$ref": "#/components/schemas/OperatingState"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "source_quality": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "name",
+          "operating_state",
+          "freshness",
+          "source_quality"
+        ],
+        "type": "object"
+      },
+      "SourceMetadata": {
+        "additionalProperties": false,
+        "properties": {
+          "credential_required": {
+            "type": "boolean"
+          },
+          "dataset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "refresh_interval_seconds": {
+            "type": "integer"
+          },
+          "required_for_now": {
+            "type": "boolean"
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "source_type": {
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "source_id",
+          "name",
+          "source_type",
+          "dataset_id",
+          "url",
+          "required_for_now",
+          "credential_required",
+          "refresh_interval_seconds",
+          "notes"
+        ],
+        "type": "object"
+      },
+      "SourceType": {
+        "enum": [
+          "official",
+          "observed",
+          "model",
+          "fallback",
+          "scenario"
+        ],
+        "type": "string"
+      },
+      "SourcesResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "generated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceMetadata"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "generated_at",
+          "sources"
+        ],
+        "type": "object"
+      },
+      "Status": {
+        "enum": [
+          "normal",
+          "watch",
+          "high",
+          "unknown"
+        ],
+        "type": "string"
+      },
+      "StatusThresholdsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "calculation_inputs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "excluded_inputs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "raw_config": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "thresholds": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "generated_at",
+          "version",
+          "thresholds",
+          "calculation_inputs",
+          "excluded_inputs",
+          "raw_config"
+        ],
+        "type": "object"
+      },
+      "TwinComponentEstimate": {
+        "additionalProperties": false,
+        "properties": {
+          "component": {
+            "type": "string"
+          },
+          "formula": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "included_in_total": {
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provenance_kind": {
+            "$ref": "#/components/schemas/EstimateProvenanceKind"
+          },
+          "value": {
+            "$ref": "#/components/schemas/QuantifiedValue"
+          }
+        },
+        "required": [
+          "component",
+          "value",
+          "provenance_kind"
+        ],
+        "type": "object"
+      },
+      "TwinResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "from_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "hours": {
+            "type": "integer"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "snapshots": {
+            "items": {
+              "$ref": "#/components/schemas/TwinSnapshot"
+            },
+            "type": "array"
+          },
+          "unavailable_fields": {
+            "items": {
+              "$ref": "#/components/schemas/UnavailableField"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "generated_at",
+          "from_time",
+          "hours",
+          "region",
+          "snapshots",
+          "unavailable_fields"
+        ],
+        "type": "object"
+      },
+      "TwinSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "carbon_estimate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CarbonEstimate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "demand_forecast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ForecastInterval"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "event_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "exchange_estimate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExchangeEstimate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "explanations": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Explanation"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "forecast_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ForecastRun"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generation_availability_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GenerationAvailabilityContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generation_mix_estimate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EstimatedGenerationMix"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mode": {
+            "$ref": "#/components/schemas/DomainMode"
+          },
+          "model_cards": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ModelCard"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "modelled_balance_contributions": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ModelledBalanceContribution"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "modelled_national_balance_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelledBalanceContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "national": {
+            "$ref": "#/components/schemas/NationalState"
+          },
+          "official_signal_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OfficialSignal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provenance_chain": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DataProvenance"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quality": {
+            "$ref": "#/components/schemas/DataQuality"
+          },
+          "regional_demand_context": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RegionalDemandForecast"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "regional_states": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RegionalState"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scenario_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScenarioResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "snapshot_id": {
+            "type": "string"
+          },
+          "solar_estimate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TwinComponentEstimate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataProvenance"
+          },
+          "unsupported_physical_behaviours": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "update_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "usual_demand_baseline": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuantifiedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "wind_estimate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TwinComponentEstimate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "snapshot_id",
+          "mode",
+          "event_time",
+          "update_time",
+          "national",
+          "source",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "UnavailableField": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "Unit": {
+        "enum": [
+          "MW",
+          "GW",
+          "MWh",
+          "GWh",
+          "percentage",
+          "tonnes_CO2",
+          "gCO2_per_kWh"
+        ],
+        "type": "string"
+      }
+    }
+  },
+  "info": {
+    "title": "Energy Pulse France Digital Twin Contracts",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/v1/config/status-thresholds": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusThresholdsResponse"
+                }
+              }
+            },
+            "description": "Thresholds used for modelled balance status. This is not an official signal."
+          }
+        },
+        "summary": "Versioned modelled-status threshold configuration"
+      }
+    },
+    "/v1/data-health": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataHealthResponse"
+                }
+              }
+            },
+            "description": "Source freshness, fallback, and unavailable-field details."
+          }
+        },
+        "summary": "Current data-source health and operating-state report"
+      }
+    },
+    "/v1/explanations": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timestamp",
+            "required": true,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Selected-hour explanation with raw technical SHAP values when available."
+          }
+        },
+        "summary": "Retrieve casual and technical explanation for one forecast hour"
+      }
+    },
+    "/v1/forecast": {
+      "get": {
+        "parameters": [
+          {
+            "description": "Forecast scope. Only national France is currently supported.",
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "enum": [
+                "france"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of forecast hours to return.",
+            "in": "query",
+            "name": "hours",
+            "required": false,
+            "schema": {
+              "maximum": 48,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Forecast run with casual and technical model explanations."
+          }
+        },
+        "summary": "Create a 48-hour national demand forecast with grouped explanations"
+      }
+    },
+    "/v1/forecast-changes": {
+      "get": {
+        "parameters": [
+          {
+            "in": "query",
+            "name": "current",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "previous",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Component comparison across matched forecast timestamps."
+          }
+        },
+        "summary": "Explain changes between two forecast runs"
+      }
+    },
+    "/v1/forecast/{run-id}": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run-id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Stored forecast run."
+          }
+        },
+        "summary": "Retrieve a previously generated forecast run"
+      }
+    },
+    "/v1/model-card": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Forecast model card and explainability limitations."
+          }
+        },
+        "summary": "Model card for the probabilistic demand forecast and explanation policy"
+      }
+    },
+    "/v1/scenarios/run": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "assumptions": {},
+                  "duration_hours": {
+                    "type": "number"
+                  },
+                  "end_time": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "magnitude": {
+                    "type": "object"
+                  },
+                  "scenario_type": {
+                    "enum": [
+                      "cold_snap",
+                      "generation_unavailability",
+                      "ev_charging_shift"
+                    ],
+                    "type": "string"
+                  },
+                  "scope": {
+                    "oneOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object"
+                      }
+                    ]
+                  },
+                  "start_time": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "user_label": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "scenario_type",
+                  "magnitude",
+                  "scope",
+                  "start_time",
+                  "assumptions"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Scenario comparison with baseline series, scenario series, deltas, causal chain, assumptions, caveats, and model/data versions."
+          }
+        },
+        "summary": "Run a deterministic first-generation scenario against a TwinSnapshot baseline"
+      }
+    },
+    "/v1/sources": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourcesResponse"
+                }
+              }
+            },
+            "description": "Public data sources and configuration artifacts used by the API."
+          }
+        },
+        "summary": "Source catalog for the Now API"
+      }
+    },
+    "/v1/state/current": {
+      "get": {
+        "parameters": [
+          {
+            "description": "French administrative region code, for example 11 for Ile-de-France.",
+            "in": "query",
+            "name": "region",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentStateResponse"
+                }
+              }
+            },
+            "description": "Current national, selected-region, and regional-map context."
+          }
+        },
+        "summary": "Current observed electricity state for the Now page"
+      }
+    },
+    "/v1/twin": {
+      "get": {
+        "parameters": [
+          {
+            "description": "Requested start timestamp. The service aligns to the latest available UTC hour at or before this time.",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of forecast hours after the current/aligned snapshot.",
+            "in": "query",
+            "name": "hours",
+            "required": false,
+            "schema": {
+              "maximum": 48,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Optional French administrative region code to place first in regional demand context.",
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TwinResponse"
+                }
+              }
+            },
+            "description": "One coherent TwinSnapshot for the current/aligned state and each forecast hour."
+          }
+        },
+        "summary": "Current and hour-indexed electricity-system twin snapshots"
+      }
+    }
+  }
+}

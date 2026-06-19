@@ -1,0 +1,23 @@
+{
+  "total_count": 1,
+  "results": [
+    {
+      "date_heure": "2026-06-17T10:00:00+00:00",
+      "perimetre": "France",
+      "consommation": 50000,
+      "prevision_j": 50500,
+      "prevision_j1": 51000,
+      "nucleaire": 35000,
+      "eolien": 4000,
+      "solaire": 7000,
+      "hydraulique": 5000,
+      "gaz": 1000,
+      "charbon": 0,
+      "fioul": 20,
+      "bioenergies": 900,
+      "ech_physiques": -6900,
+      "taux_co2": 22,
+      "date_maj": "2026-06-17T10:10:00+00:00"
+    }
+  ]
+}

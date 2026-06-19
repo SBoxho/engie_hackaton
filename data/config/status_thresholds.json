@@ -1,0 +1,57 @@
+{
+  "version": "balance-pressure-thresholds.v1",
+  "description": "Modelled balance status thresholds for Energy Pulse France public views. Inputs are demand, available domestic generation, and net imports only.",
+  "balance_pressure_ratio": {
+    "normal_min": 0.0,
+    "watch_min": 0.92,
+    "high_min": 0.98
+  },
+  "visual_pressure_score": {
+    "normal_min": 0.0,
+    "watch_min": 0.62,
+    "high_min": 0.82
+  },
+  "calculation_inputs": [
+    "demand_mw",
+    "available_generation_mw",
+    "net_imports_mw"
+  ],
+  "excluded_inputs": [
+    "carbon",
+    "forecast_uncertainty"
+  ],
+  "modelled_balance_context": {
+    "method": "historical-residual-load-context.v1",
+    "description": "Transparent national balance context. It compares forecast residual load and announced unavailability context with comparable recent historical distributions. It is not an EcoWatt calculation and does not claim to be an operational reserve margin.",
+    "comparable_keys": [
+      "local_hour",
+      "day_type"
+    ],
+    "history_window_days": 28,
+    "weights": {
+      "residual_load_percentile": 0.75,
+      "announced_unavailability_ratio": 0.25
+    },
+    "score_thresholds": {
+      "normal_min": 0.0,
+      "watch_min": 0.62,
+      "high_min": 0.82
+    },
+    "normalizers": {
+      "announced_unavailability_high_ratio": 0.08
+    },
+    "calculation_inputs": [
+      "forecast_demand_mw",
+      "estimated_wind_mw",
+      "estimated_solar_mw",
+      "nuclear_availability_or_expected_output_mw",
+      "announced_generation_unavailability_mw",
+      "historical_residual_load_distribution"
+    ],
+    "excluded_inputs": [
+      "carbon",
+      "forecast_uncertainty",
+      "regional_demand_context"
+    ]
+  }
+}

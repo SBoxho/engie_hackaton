@@ -1,0 +1,9 @@
+﻿{
+    "data_table_fallback":  "Forecast data expander renders a tabular fallback for all 48 forecast rows.",
+    "selected_timestamp_propagation":  "Verified by tests/test_next48h_page.py: selecting a different forecast hour updates selected-hour, future regional, and generation/balance sections.",
+    "automated_browser_axe":  "Not run: in-app browser runtime failed in this sandbox; Streamlit AppTest and DOM-level widget checks were used instead.",
+    "regional_future_labelling":  "Verified by unit/e2e tests: future regional map labels forecast demand and states it is not current regional context.",
+    "keyboard_navigation":  "Verified by Streamlit AppTest: Forecast hour selectbox plus Previous hour and Next hour buttons update the selected timestamp.",
+    "numeric_reconciliation":  "Verified by unit test: usual demand + positive drivers - negative drivers equals selected P50 forecast.",
+    "verification":  "python -m scripts.verify: 178 passed, 2 skipped."
+}

@@ -1,0 +1,81 @@
+"""Public-data ingestion foundation for Energy Pulse France."""
+from __future__ import annotations
+
+from src.public_data.contracts import (
+    AdapterConfig,
+    AdapterResult,
+    DataWindow,
+    FallbackStatus,
+    Provenance,
+    PublicDataError,
+    QualityStatus,
+    SourceAdapter,
+)
+from src.public_data.models import AdapterFailure, PublicDataSchema
+from src.public_data.quality import (
+    DataHealthReport,
+    SchemaFailure,
+    SourceHealth,
+    ValidationResult,
+    analyze_frame_health,
+    build_data_health,
+    build_data_health_report,
+    validate_public_records,
+)
+from src.public_data.storage import (
+    CANONICAL_COLUMNS,
+    IngestionWriteResult,
+    LayerWriteResult,
+    PublicDataStorageError,
+    PublicDataStore,
+    PublicParquetLayer,
+    build_hourly_gold,
+    ensure_canonical_columns,
+)
+from src.public_data.time import (
+    as_utc_timestamp,
+    local_day_utc_hours,
+    local_midnight_to_utc,
+    normalize_utc_series,
+    paris_day_utc_bounds,
+    paris_hourly_index_for_day,
+    render_paris,
+    to_utc,
+)
+
+__all__ = [
+    "AdapterConfig",
+    "AdapterFailure",
+    "AdapterResult",
+    "CANONICAL_COLUMNS",
+    "DataHealthReport",
+    "DataWindow",
+    "FallbackStatus",
+    "IngestionWriteResult",
+    "LayerWriteResult",
+    "Provenance",
+    "PublicDataError",
+    "PublicDataSchema",
+    "PublicDataStorageError",
+    "PublicDataStore",
+    "PublicParquetLayer",
+    "QualityStatus",
+    "SchemaFailure",
+    "SourceAdapter",
+    "SourceHealth",
+    "ValidationResult",
+    "analyze_frame_health",
+    "as_utc_timestamp",
+    "build_data_health",
+    "build_data_health_report",
+    "build_hourly_gold",
+    "ensure_canonical_columns",
+    "local_day_utc_hours",
+    "local_midnight_to_utc",
+    "normalize_utc_series",
+    "paris_day_utc_bounds",
+    "paris_hourly_index_for_day",
+    "render_paris",
+    "to_utc",
+    "validate_public_records",
+]

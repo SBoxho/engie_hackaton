@@ -10,16 +10,34 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(PROJECT_ROOT / ".env")
 
 
+def _env_bool(name: str, default: str = "0") -> bool:
+    return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_int(name: str, default: str) -> int:
+    try:
+        return int(os.getenv(name, default))
+    except (TypeError, ValueError):
+        return int(default)
+
+
+def _env_float(name: str, default: str) -> float:
+    try:
+        return float(os.getenv(name, default))
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def _env_csv(name: str, default: str) -> tuple[str, ...]:
+    values = [item.strip() for item in os.getenv(name, default).split(",")]
+    return tuple(item for item in values if item)
+
+
 @dataclass(frozen=True)
 class Settings:
     project_root: Path = PROJECT_ROOT
     app_mode: str = os.getenv("APP_MODE", "demo").strip().lower()
-    demo_allow_external_api: bool = os.getenv("DEMO_ALLOW_EXTERNAL_API", "0").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
+    demo_allow_external_api: bool = _env_bool("DEMO_ALLOW_EXTERNAL_API", "0")
     odre_base_url: str = os.getenv(
         "ODRE_BASE_URL", "https://odre.opendatasoft.com/api/explore/v2.1"
     )
@@ -51,7 +69,25 @@ class Settings:
     )
     entsoe_api_token: str | None = os.getenv("ENTSOE_API_TOKEN") or None
     timezone: str = os.getenv("ENERGY_PULSE_TIMEZONE", "Europe/Paris")
-    history_hours: int = int(os.getenv("ENERGY_PULSE_HISTORY_HOURS", "72"))
+    history_hours: int = _env_int("ENERGY_PULSE_HISTORY_HOURS", "72")
+    api_allowed_origins: tuple[str, ...] = _env_csv(
+        "ENERGY_PULSE_ALLOWED_ORIGINS",
+        "http://localhost:8501,http://127.0.0.1:8501",
+    )
+    api_max_body_bytes: int = _env_int("ENERGY_PULSE_MAX_BODY_BYTES", "65536")
+    public_http_timeout_seconds: float = _env_float("ENERGY_PULSE_HTTP_TIMEOUT_SECONDS", "15")
+    public_http_max_retries: int = _env_int("ENERGY_PULSE_HTTP_MAX_RETRIES", "2")
+    public_http_min_interval_seconds: float = _env_float("ENERGY_PULSE_HTTP_MIN_INTERVAL_SECONDS", "0.25")
+    circuit_breaker_failure_threshold: int = _env_int("ENERGY_PULSE_CIRCUIT_BREAKER_FAILURES", "3")
+    circuit_breaker_recovery_seconds: float = _env_float("ENERGY_PULSE_CIRCUIT_BREAKER_RECOVERY_SECONDS", "60")
+    demo_fixed_date_label: str = os.getenv(
+        "ENERGY_PULSE_DEMO_DATE_LABEL",
+        "demo replay window anchored to 19 Jun 2026 for presentation",
+    )
+    demo_anchor_end_utc: str = os.getenv(
+        "ENERGY_PULSE_DEMO_ANCHOR_END_UTC",
+        "2026-06-19T10:30:00Z",
+    )
 
     @property
     def raw_dir(self) -> Path:

@@ -1,0 +1,25 @@
+{
+  "_fixture_note": "Synthetic data.education.gouv.fr-shaped fixture for tests.",
+  "total_count": 2,
+  "results": [
+    {
+      "start_date": "2026-02-14",
+      "end_date": "2026-03-02",
+      "zones": "Zone A",
+      "description": "Winter break",
+      "location": "Academie test",
+      "population": "Eleves",
+      "annee_scolaire": "2025-2026",
+      "published_at": "2025-09-01T00:00:00Z"
+    },
+    {
+      "start_date": "2026-04-11",
+      "end_date": "2026-04-27",
+      "zones": ["Zone B", "Zone C"],
+      "description": "Spring break",
+      "location": "Academie test",
+      "population": "Eleves",
+      "annee_scolaire": "2025-2026"
+    }
+  ]
+}

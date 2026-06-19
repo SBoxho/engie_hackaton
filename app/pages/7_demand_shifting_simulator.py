@@ -557,4 +557,4 @@ with st.expander("Transparent educational assumptions and scoring", expanded=Fal
         "settlement, comfort, or verified carbon accounting."
     )
 
-st.link_button("Back to Energy Pulse France", "/")
+st.link_button("Back to public dashboard", "/")

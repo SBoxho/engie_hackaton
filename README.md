@@ -45,6 +45,20 @@ No credential is needed for RTE/ODRE or Open-Meteo. Optional secrets are only us
 
 The app defaults to `APP_MODE=demo` so a clean clone can boot from the small committed `demo_data/` bundle without raw datasets, trained model binaries, or network calls. The UI shows **Demo data mode** when this path is active. Use `APP_MODE=live` for the normal fetch/cache/pipeline behavior.
 
+Release runbook: see `docs/demo-release-runbook.md` for the architecture diagram, setup guide, model-training guide, scenario assumptions, API guide, troubleshooting guide, known limitations, and three-minute judge script.
+
+One startup command:
+
+```powershell
+python run_app.py
+```
+
+One verification command:
+
+```powershell
+python -m scripts.verify
+```
+
 ```powershell
 # Reliable hackathon/demo run: uses only demo_data/
 $env:APP_MODE="demo"
@@ -225,6 +239,24 @@ The command fetches each consolidated éCO2mix year separately to preserve raw O
 
 See `docs/demand_model.md` for features, split assumptions, artifact format, limitations, and interpretation guidance. Model performance depends on obtaining a sufficiently long, continuous historical demand, weather, and calendar dataset; short cached slices can train a smoke-test model but must not be read as evidence of forecasting skill.
 
+## Probabilistic 48-hour demand forecast
+
+The production-oriented forecast milestone is documented in `docs/probabilistic-demand-forecast.md`. It trains P10/P50/P90 residual quantile models on top of the transparent usual-demand baseline, uses rolling time-ordered validation, compares against usual-demand and seasonal-naive baselines, writes a lightweight registry manifest and model card, and keeps the usual-demand baseline as the inference fallback whenever no champion model exists.
+
+```powershell
+python -m scripts.train_probabilistic_demand_forecast
+```
+
+The training command reports the model status honestly as `champion` or `rejected`; rejected candidates are stored for audit but are not used as production forecasts.
+
+## Electricity-system twin API
+
+`GET /v1/twin?from=<timestamp>&hours=48&region=<region-code>` returns one coherent `TwinSnapshot` for the aligned current hour and each forecast hour. It includes demand intervals, usual-demand baseline, reconciled regional demand context, generation estimates with provenance, nuclear availability context, a residual flexible/import bucket, exchange estimate, modelled national balance context, official signal, carbon context, data quality, and provenance.
+
+The modelled balance context is documented in `docs/electricity-system-twin.md`. It is not EcoWatt and does not claim to calculate operational reserve margin.
+
+`POST /v1/scenarios/run` runs the first-generation What If scenario engine against the same `TwinSnapshot` baseline sequence. It supports cold snap, generating-unit unavailability, and EV charging-shift scenarios with deterministic request hashing, optional caching, explicit assumptions, caveats, response ranges, and unsupported grid behaviours. Details and examples are in `docs/scenario-engine.md`.
+
 ## Grid mood
 
 Calibration uses Europe/Paris local hour and meteorological season. Transparent historical quantiles define high demand, high/low CO₂, high renewable share, and high fossil share. The fallback order is season/hour, season, hour, global, then explicit fixed thresholds. Decision precedence is Carbon-heavy, Tense, Renewable-rich, Calm. The result exposes its reason, thresholds, segment, sample count, and fallback status.
@@ -234,8 +266,7 @@ Grid mood is an educational indicator, not an RTE operational alert or grid-secu
 ## Test
 
 ```powershell
-python -m compileall -q app src scripts
-python -m pytest -q
+python -m scripts.verify
 ```
 
 Real-service smoke tests are opt-in and skip gracefully offline:

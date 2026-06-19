@@ -1,0 +1,20 @@
+{
+  "total_count": 1,
+  "results": [
+    {
+      "date_heure": "2026-01-01T00:00:00+00:00",
+      "perimetre": "Ile-de-France",
+      "consommation": 11900,
+      "nucleaire": 420,
+      "eolien": 260,
+      "solaire": 80,
+      "hydraulique": 120,
+      "gaz": 540,
+      "charbon": 0,
+      "fioul": 0,
+      "bioenergies": 70,
+      "ech_physiques": 10410,
+      "taux_co2": 45
+    }
+  ]
+}

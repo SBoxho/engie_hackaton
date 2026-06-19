@@ -12,6 +12,8 @@ import requests
 
 from src.config import settings
 from src.data_processing.clean_energy_mix import clean_energy_mix
+from src.public_data.contracts import SourceUnavailableError
+from src.public_data.http import PublicDataHttpClient
 from src.utils.io import latest_file, read_json, timestamped_path, write_json
 from src.utils.logging import get_logger
 from src.utils.time import iso_utc
@@ -166,6 +168,7 @@ def fetch_regional_eco2mix(
         f'AND date_heure <= "{iso_utc(end)}"'
     )
     client = session or requests.Session()
+    http_client = None if session is not None else PublicDataHttpClient(source_name="rte_eco2mix_regional")
     records: list[dict[str, Any]] = []
     offset = 0
     total = None
@@ -178,10 +181,13 @@ def fetch_regional_eco2mix(
             "order_by": "date_heure asc",
         }
         try:
-            response = client.get(_records_url(), params=params, timeout=timeout)
-            response.raise_for_status()
-            payload = response.json()
-        except (requests.RequestException, ValueError) as exc:
+            if http_client is None:
+                response = client.get(_records_url(), params=params, timeout=timeout)
+                response.raise_for_status()
+                payload = response.json()
+            else:
+                payload = http_client.get_json(_records_url(), params=params)
+        except (requests.RequestException, SourceUnavailableError, ValueError) as exc:
             raise RegionalEco2MixError(f"Failed to fetch regional eco2mix data: {exc}") from exc
 
         batch = payload.get("results")

@@ -1,0 +1,2672 @@
+{
+  "$defs": {
+    "BaselineDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_id": {
+          "type": "string"
+        },
+        "comparison_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "lookback_days": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "method": {
+          "type": "string"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "baseline_id",
+        "version",
+        "method",
+        "comparison_keys"
+      ],
+      "type": "object"
+    },
+    "CacheInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_hit": {
+          "type": "boolean"
+        },
+        "cache_key": {
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "ttl_seconds": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "cache_key",
+        "ttl_seconds",
+        "generated_at",
+        "expires_at",
+        "cache_hit"
+      ],
+      "type": "object"
+    },
+    "CarbonEstimate": {
+      "additionalProperties": false,
+      "properties": {
+        "included_in_balance_context": {
+          "type": "boolean"
+        },
+        "intensity": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "method": {
+          "type": "string"
+        },
+        "provenance_kind": {
+          "$ref": "#/$defs/EstimateProvenanceKind"
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        }
+      },
+      "required": [
+        "intensity",
+        "provenance_kind",
+        "method",
+        "included_in_balance_context",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "Confidence": {
+      "enum": [
+        "high",
+        "medium",
+        "low",
+        "unavailable"
+      ],
+      "type": "string"
+    },
+    "ConfidenceAssessment": {
+      "additionalProperties": false,
+      "properties": {
+        "backtest_mae": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QuantifiedValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "confidence": {
+          "$ref": "#/$defs/Confidence"
+        },
+        "interval_calibration": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        }
+      },
+      "required": [
+        "confidence",
+        "rationale",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "CurrentDemandContext": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_fallback_level": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "baseline_id": {
+          "type": "string"
+        },
+        "baseline_method": {
+          "type": "string"
+        },
+        "baseline_sample_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "current": {
+          "$ref": "#/$defs/NullableMetric"
+        },
+        "difference_vs_usual_gw": {
+          "$ref": "#/$defs/NullableMetric"
+        },
+        "difference_vs_usual_pct": {
+          "$ref": "#/$defs/NullableMetric"
+        },
+        "usual": {
+          "$ref": "#/$defs/NullableMetric"
+        }
+      },
+      "required": [
+        "current",
+        "usual",
+        "difference_vs_usual_pct",
+        "difference_vs_usual_gw",
+        "baseline_id",
+        "baseline_method"
+      ],
+      "type": "object"
+    },
+    "CurrentGenerationMix": {
+      "additionalProperties": false,
+      "properties": {
+        "fossil_share": {
+          "$ref": "#/$defs/NullableMetric"
+        },
+        "renewable_share": {
+          "$ref": "#/$defs/NullableMetric"
+        },
+        "technologies": {
+          "items": {
+            "$ref": "#/$defs/GenerationTechnologyMetric"
+          },
+          "type": "array"
+        },
+        "total": {
+          "$ref": "#/$defs/NullableMetric"
+        }
+      },
+      "required": [
+        "total",
+        "technologies",
+        "renewable_share",
+        "fossil_share"
+      ],
+      "type": "object"
+    },
+    "CurrentMapRegion": {
+      "additionalProperties": false,
+      "properties": {
+        "availability_flag": {
+          "type": "boolean"
+        },
+        "demand_anomaly_pct": {
+          "$ref": "#/$defs/NullableMetric"
+        },
+        "observed_demand": {
+          "$ref": "#/$defs/NullableMetric"
+        },
+        "region_id": {
+          "type": "string"
+        },
+        "region_name": {
+          "type": "string"
+        },
+        "source_quality": {
+          "type": "string"
+        },
+        "usual_demand": {
+          "$ref": "#/$defs/NullableMetric"
+        }
+      },
+      "required": [
+        "region_id",
+        "region_name",
+        "demand_anomaly_pct",
+        "observed_demand",
+        "usual_demand",
+        "source_quality",
+        "availability_flag"
+      ],
+      "type": "object"
+    },
+    "CurrentModelledStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "calculation_inputs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "label": {
+          "type": "string"
+        },
+        "model_id": {
+          "type": "string"
+        },
+        "model_version": {
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "signal_type": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "threshold_config_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "signal_type",
+        "status",
+        "label",
+        "model_id",
+        "model_version",
+        "calculation_inputs",
+        "threshold_config_version"
+      ],
+      "type": "object"
+    },
+    "CurrentOfficialSignal": {
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "signal_type": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "signal_type",
+        "available",
+        "status",
+        "label",
+        "timestamp",
+        "source"
+      ],
+      "type": "object"
+    },
+    "CurrentStateResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "cache": {
+          "$ref": "#/$defs/CacheInfo"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "map": {
+          "items": {
+            "$ref": "#/$defs/CurrentMapRegion"
+          },
+          "type": "array"
+        },
+        "national_context": {
+          "$ref": "#/$defs/NationalCurrentContext"
+        },
+        "operating_state": {
+          "$ref": "#/$defs/OperatingState"
+        },
+        "region": {
+          "type": "string"
+        },
+        "selected_region_context": {
+          "$ref": "#/$defs/RegionalCurrentContext"
+        },
+        "unavailable_fields": {
+          "items": {
+            "$ref": "#/$defs/UnavailableField"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "generated_at",
+        "region",
+        "operating_state",
+        "cache",
+        "national_context",
+        "selected_region_context",
+        "map",
+        "unavailable_fields"
+      ],
+      "type": "object"
+    },
+    "DataHealthResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "cache": {
+          "$ref": "#/$defs/CacheInfo"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "model_health": {
+          "$ref": "#/$defs/ModelHealth"
+        },
+        "operating_state": {
+          "$ref": "#/$defs/OperatingState"
+        },
+        "scenario_engine": {
+          "$ref": "#/$defs/ScenarioEngineHealth"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceHealth"
+          },
+          "type": "array"
+        },
+        "unavailable_fields": {
+          "items": {
+            "$ref": "#/$defs/UnavailableField"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "generated_at",
+        "operating_state",
+        "cache",
+        "sources",
+        "model_health",
+        "scenario_engine",
+        "unavailable_fields"
+      ],
+      "type": "object"
+    },
+    "DataProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "dataset_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "event_time": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "fallback_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "is_demo": {
+          "type": "boolean"
+        },
+        "is_fallback": {
+          "type": "boolean"
+        },
+        "license": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mode": {
+          "$ref": "#/$defs/DomainMode"
+        },
+        "name": {
+          "type": "string"
+        },
+        "replay_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "retrieved_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_type": {
+          "$ref": "#/$defs/SourceType"
+        },
+        "transformation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "update_time": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "source_type",
+        "name",
+        "mode",
+        "event_time",
+        "update_time"
+      ],
+      "type": "object"
+    },
+    "DataQuality": {
+      "additionalProperties": false,
+      "properties": {
+        "checked_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "confidence": {
+          "$ref": "#/$defs/Confidence"
+        },
+        "freshness": {
+          "$ref": "#/$defs/Freshness"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "warnings": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "freshness",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "DemandContext": {
+      "additionalProperties": false,
+      "properties": {
+        "anomaly_percentage": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "baseline_definition": {
+          "$ref": "#/$defs/BaselineDefinition"
+        },
+        "current": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "interpretation": {
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/Scope"
+        },
+        "usual": {
+          "$ref": "#/$defs/QuantifiedValue"
+        }
+      },
+      "required": [
+        "current",
+        "usual",
+        "anomaly_percentage",
+        "baseline_definition",
+        "scope",
+        "interpretation"
+      ],
+      "type": "object"
+    },
+    "DomainMode": {
+      "enum": [
+        "live",
+        "forecast",
+        "simulation",
+        "replay"
+      ],
+      "type": "string"
+    },
+    "EnvironmentalMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "estimate": {
+          "$ref": "#/$defs/NullableMetric"
+        },
+        "included_in_modelled_status": {
+          "type": "boolean"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric",
+        "estimate",
+        "included_in_modelled_status",
+        "note"
+      ],
+      "type": "object"
+    },
+    "EstimateProvenanceKind": {
+      "enum": [
+        "observed",
+        "official_forecast",
+        "statistical_estimate",
+        "persistence_fallback",
+        "residual_estimate",
+        "unavailable"
+      ],
+      "type": "string"
+    },
+    "EstimatedGenerationMix": {
+      "additionalProperties": false,
+      "properties": {
+        "components": {
+          "items": {
+            "$ref": "#/$defs/TwinComponentEstimate"
+          },
+          "type": "array"
+        },
+        "formula": {
+          "type": "string"
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "residual_bucket_name": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        },
+        "total": {
+          "$ref": "#/$defs/QuantifiedValue"
+        }
+      },
+      "required": [
+        "total",
+        "components",
+        "residual_bucket_name",
+        "formula",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "ExchangeEstimate": {
+      "additionalProperties": false,
+      "properties": {
+        "exports": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "imports": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "method": {
+          "type": "string"
+        },
+        "net_imports": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "provenance_kind": {
+          "$ref": "#/$defs/EstimateProvenanceKind"
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        }
+      },
+      "required": [
+        "net_imports",
+        "imports",
+        "exports",
+        "provenance_kind",
+        "method",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "Explanation": {
+      "additionalProperties": false,
+      "properties": {
+        "caveats": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "confidence": {
+          "$ref": "#/$defs/ConfidenceAssessment"
+        },
+        "drivers": {
+          "items": {
+            "$ref": "#/$defs/ExplanationDriver"
+          },
+          "type": "array"
+        },
+        "explanation_id": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "explanation_id",
+        "method",
+        "text",
+        "drivers",
+        "confidence",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "ExplanationDriver": {
+      "additionalProperties": false,
+      "properties": {
+        "contribution": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "direction": {
+          "type": "string"
+        },
+        "included_in_balance_pressure": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        }
+      },
+      "required": [
+        "name",
+        "contribution",
+        "direction",
+        "included_in_balance_pressure",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "ForecastInterval": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "$ref": "#/$defs/ConfidenceAssessment"
+        },
+        "p10": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "p50": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "p90": {
+          "$ref": "#/$defs/QuantifiedValue"
+        }
+      },
+      "required": [
+        "p10",
+        "p50",
+        "p90",
+        "confidence"
+      ],
+      "type": "object"
+    },
+    "ForecastPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "balance_context": {
+          "$ref": "#/$defs/ModelledBalanceContext"
+        },
+        "demand": {
+          "$ref": "#/$defs/ForecastInterval"
+        },
+        "explanation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Explanation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "horizon_hours": {
+          "type": "integer"
+        },
+        "route_label": {
+          "type": "string"
+        },
+        "route_source_type": {
+          "$ref": "#/$defs/SourceType"
+        },
+        "target_time": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "uncertainty": {
+          "$ref": "#/$defs/QuantifiedValue"
+        }
+      },
+      "required": [
+        "target_time",
+        "horizon_hours",
+        "demand",
+        "balance_context",
+        "route_source_type",
+        "route_label",
+        "uncertainty"
+      ],
+      "type": "object"
+    },
+    "ForecastRun": {
+      "additionalProperties": false,
+      "properties": {
+        "generated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "horizon_hours": {
+          "type": "integer"
+        },
+        "mode": {
+          "$ref": "#/$defs/DomainMode"
+        },
+        "model_card": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelCard"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "origin_time": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "points": {
+          "items": {
+            "$ref": "#/$defs/ForecastPoint"
+          },
+          "type": "array"
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        }
+      },
+      "required": [
+        "run_id",
+        "mode",
+        "origin_time",
+        "generated_at",
+        "horizon_hours",
+        "points",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "Freshness": {
+      "enum": [
+        "fresh",
+        "delayed",
+        "stale",
+        "unavailable"
+      ],
+      "type": "string"
+    },
+    "FreshnessStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "age_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "refresh_interval_seconds": {
+          "type": "integer"
+        },
+        "retrieved_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "$ref": "#/$defs/OperatingState"
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "timestamp",
+        "retrieved_at",
+        "age_seconds",
+        "refresh_interval_seconds"
+      ],
+      "type": "object"
+    },
+    "GenerationAvailabilityContext": {
+      "additionalProperties": false,
+      "properties": {
+        "announced_unavailability_components": {
+          "items": {
+            "$ref": "#/$defs/TwinComponentEstimate"
+          },
+          "type": "array"
+        },
+        "announced_unavailable": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "method": {
+          "type": "string"
+        },
+        "nuclear": {
+          "$ref": "#/$defs/TwinComponentEstimate"
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        },
+        "unavailable_optional_sources": {
+          "items": {
+            "$ref": "#/$defs/UnavailableField"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "nuclear",
+        "announced_unavailable",
+        "announced_unavailability_components",
+        "unavailable_optional_sources",
+        "method",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "GenerationEstimate": {
+      "additionalProperties": false,
+      "properties": {
+        "power": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "share": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QuantifiedValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "technology": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "technology",
+        "power"
+      ],
+      "type": "object"
+    },
+    "GenerationMix": {
+      "additionalProperties": false,
+      "properties": {
+        "co2_intensity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QuantifiedValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "estimates": {
+          "items": {
+            "$ref": "#/$defs/GenerationEstimate"
+          },
+          "type": "array"
+        },
+        "fossil_share": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QuantifiedValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "renewable_share": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QuantifiedValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "total": {
+          "$ref": "#/$defs/QuantifiedValue"
+        }
+      },
+      "required": [
+        "total",
+        "estimates"
+      ],
+      "type": "object"
+    },
+    "GenerationTechnologyMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "power": {
+          "$ref": "#/$defs/NullableMetric"
+        },
+        "share": {
+          "$ref": "#/$defs/NullableMetric"
+        },
+        "technology": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "technology",
+        "power",
+        "share"
+      ],
+      "type": "object"
+    },
+    "ModelCard": {
+      "additionalProperties": false,
+      "properties": {
+        "display_name": {
+          "type": "string"
+        },
+        "evaluation_metrics": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "type": "object"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "model_id": {
+          "type": "string"
+        },
+        "promoted_horizons": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "provenance": {
+          "$ref": "#/$defs/DataProvenance"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "source_type": {
+          "$ref": "#/$defs/SourceType"
+        },
+        "training_period_end": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "training_period_start": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "model_id",
+        "version",
+        "display_name",
+        "purpose",
+        "source_type",
+        "training_period_start",
+        "training_period_end",
+        "evaluation_metrics",
+        "promoted_horizons",
+        "provenance",
+        "quality",
+        "limitations"
+      ],
+      "type": "object"
+    },
+    "ModelHealth": {
+      "additionalProperties": false,
+      "properties": {
+        "fallback_usage": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latest_successful_forecast_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latest_successful_forecast_run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "model_id": {
+          "type": "string"
+        },
+        "model_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recent_forecast_error_mae_mw": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "model_id",
+        "status",
+        "model_version",
+        "latest_successful_forecast_at",
+        "latest_successful_forecast_run_id",
+        "recent_forecast_error_mae_mw"
+      ],
+      "type": "object"
+    },
+    "ModelledBalanceContext": {
+      "additionalProperties": false,
+      "properties": {
+        "available_generation": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "calculation_inputs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "import_requirement": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "method": {
+          "type": "string"
+        },
+        "net_imports": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "pressure_ratio": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "supply_margin": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "threshold_config_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "pressure_ratio",
+        "available_generation",
+        "net_imports",
+        "supply_margin",
+        "import_requirement",
+        "threshold_config_version",
+        "source",
+        "quality",
+        "calculation_inputs"
+      ],
+      "type": "object"
+    },
+    "ModelledBalanceContribution": {
+      "additionalProperties": false,
+      "properties": {
+        "component": {
+          "type": "string"
+        },
+        "contribution": {
+          "type": "number"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        },
+        "value": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "weight": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "component",
+        "value",
+        "weight",
+        "contribution",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "NationalCurrentContext": {
+      "additionalProperties": false,
+      "properties": {
+        "carbon_estimate": {
+          "$ref": "#/$defs/EnvironmentalMetric"
+        },
+        "demand": {
+          "$ref": "#/$defs/CurrentDemandContext"
+        },
+        "freshness": {
+          "$ref": "#/$defs/FreshnessStatus"
+        },
+        "generation_mix": {
+          "$ref": "#/$defs/CurrentGenerationMix"
+        },
+        "modelled_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CurrentModelledStatus"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "net_imports": {
+          "$ref": "#/$defs/NullableMetric"
+        },
+        "official_ecowatt_signal": {
+          "$ref": "#/$defs/CurrentOfficialSignal"
+        },
+        "physical_exports": {
+          "$ref": "#/$defs/NullableMetric"
+        },
+        "physical_imports": {
+          "$ref": "#/$defs/NullableMetric"
+        }
+      },
+      "required": [
+        "demand",
+        "freshness",
+        "generation_mix",
+        "physical_imports",
+        "physical_exports",
+        "net_imports",
+        "carbon_estimate",
+        "official_ecowatt_signal",
+        "modelled_status"
+      ],
+      "type": "object"
+    },
+    "NationalState": {
+      "additionalProperties": false,
+      "properties": {
+        "balance_context": {
+          "$ref": "#/$defs/ModelledBalanceContext"
+        },
+        "demand_context": {
+          "$ref": "#/$defs/DemandContext"
+        },
+        "generation_mix": {
+          "$ref": "#/$defs/GenerationMix"
+        },
+        "official_signal": {
+          "$ref": "#/$defs/OfficialSignal"
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "regions": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/RegionalState"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scope": {
+          "$ref": "#/$defs/Scope"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        }
+      },
+      "required": [
+        "scope",
+        "demand_context",
+        "generation_mix",
+        "official_signal",
+        "balance_context",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "NullableMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_quality": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unit": {
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "value",
+        "unit"
+      ],
+      "type": "object"
+    },
+    "OfficialSignal": {
+      "additionalProperties": false,
+      "properties": {
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "scope": {
+          "$ref": "#/$defs/Scope"
+        },
+        "signal_time": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "update_time": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "scope",
+        "status",
+        "label",
+        "signal_time",
+        "update_time",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "OperatingState": {
+      "enum": [
+        "fresh_live_data",
+        "delayed_live_data",
+        "last_known_good_fallback",
+        "source_unavailable",
+        "historical_replay"
+      ],
+      "type": "string"
+    },
+    "QuantifiedValue": {
+      "additionalProperties": false,
+      "properties": {
+        "display_unit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Unit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "display_value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "event_time": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "is_fallback": {
+          "type": "boolean"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        },
+        "unit": {
+          "$ref": "#/$defs/Unit"
+        },
+        "update_time": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "event_time",
+        "update_time",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "RegionalCurrentContext": {
+      "additionalProperties": false,
+      "properties": {
+        "connected_grid_note": {
+          "type": "string"
+        },
+        "demand": {
+          "$ref": "#/$defs/CurrentDemandContext"
+        },
+        "freshness": {
+          "$ref": "#/$defs/FreshnessStatus"
+        },
+        "local_generation": {
+          "$ref": "#/$defs/CurrentGenerationMix"
+        },
+        "net_flow": {
+          "$ref": "#/$defs/NullableMetric"
+        },
+        "physical_balance": {
+          "$ref": "#/$defs/NullableMetric"
+        },
+        "region_code": {
+          "type": "string"
+        },
+        "region_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "region_code",
+        "region_name",
+        "demand",
+        "freshness",
+        "local_generation",
+        "net_flow",
+        "physical_balance",
+        "connected_grid_note"
+      ],
+      "type": "object"
+    },
+    "RegionalDemandForecast": {
+      "additionalProperties": false,
+      "properties": {
+        "forecast": {
+          "$ref": "#/$defs/ForecastInterval"
+        },
+        "method": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "reconciliation_factor": {
+          "type": "number"
+        },
+        "region_code": {
+          "type": "string"
+        },
+        "region_name": {
+          "type": "string"
+        },
+        "share_of_national_p50": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        },
+        "unreconciled_p50": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "usual": {
+          "$ref": "#/$defs/QuantifiedValue"
+        }
+      },
+      "required": [
+        "region_code",
+        "region_name",
+        "forecast",
+        "usual",
+        "unreconciled_p50",
+        "share_of_national_p50",
+        "reconciliation_factor",
+        "method",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "RegionalState": {
+      "additionalProperties": false,
+      "properties": {
+        "demand_context": {
+          "$ref": "#/$defs/DemandContext"
+        },
+        "grid_context_note": {
+          "type": "string"
+        },
+        "local_generation": {
+          "$ref": "#/$defs/GenerationMix"
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "region_code": {
+          "type": "string"
+        },
+        "region_name": {
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/Scope"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        }
+      },
+      "required": [
+        "region_code",
+        "region_name",
+        "scope",
+        "demand_context",
+        "local_generation",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "ScenarioDelta": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "delta": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "explanation": {
+          "type": "string"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "scenario": {
+          "$ref": "#/$defs/QuantifiedValue"
+        }
+      },
+      "required": [
+        "metric",
+        "baseline",
+        "scenario",
+        "delta",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "ScenarioEngineHealth": {
+      "additionalProperties": false,
+      "properties": {
+        "assumption_version": {
+          "type": "string"
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "cache_enabled": {
+          "type": "boolean"
+        },
+        "last_successful_scenario_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "available",
+        "version",
+        "assumption_version",
+        "cache_enabled"
+      ],
+      "type": "object"
+    },
+    "ScenarioEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "affected_value": {
+          "type": "string"
+        },
+        "delta": {
+          "$ref": "#/$defs/QuantifiedValue"
+        },
+        "end_time": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "event_id": {
+          "type": "string"
+        },
+        "event_type": {
+          "type": "string"
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        },
+        "start_time": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "event_type",
+        "start_time",
+        "end_time",
+        "affected_value",
+        "delta",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "ScenarioRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "assumption_version": {
+          "type": "string"
+        },
+        "baseline_forecast_run_id": {
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "events": {
+          "items": {
+            "$ref": "#/$defs/ScenarioEvent"
+          },
+          "type": "array"
+        },
+        "mode": {
+          "$ref": "#/$defs/DomainMode"
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "scenario_id": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        }
+      },
+      "required": [
+        "scenario_id",
+        "mode",
+        "created_at",
+        "baseline_forecast_run_id",
+        "assumption_version",
+        "events",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "ScenarioResult": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "$ref": "#/$defs/ConfidenceAssessment"
+        },
+        "deltas": {
+          "items": {
+            "$ref": "#/$defs/ScenarioDelta"
+          },
+          "type": "array"
+        },
+        "forecast_points": {
+          "items": {
+            "$ref": "#/$defs/ForecastPoint"
+          },
+          "type": "array"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "request": {
+          "$ref": "#/$defs/ScenarioRequest"
+        },
+        "result_id": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        }
+      },
+      "required": [
+        "result_id",
+        "request",
+        "generated_at",
+        "forecast_points",
+        "deltas",
+        "confidence",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "Scope": {
+      "enum": [
+        "national",
+        "regional"
+      ],
+      "type": "string"
+    },
+    "SourceHealth": {
+      "additionalProperties": false,
+      "properties": {
+        "adapter_failures": {
+          "type": "integer"
+        },
+        "circuit_breaker_state": {
+          "type": "string"
+        },
+        "fallback_records": {
+          "type": "integer"
+        },
+        "freshness": {
+          "$ref": "#/$defs/FreshnessStatus"
+        },
+        "latest_successful_fetch_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "missing_intervals": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "operating_state": {
+          "$ref": "#/$defs/OperatingState"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "source_quality": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "name",
+        "operating_state",
+        "freshness",
+        "source_quality"
+      ],
+      "type": "object"
+    },
+    "SourceMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "credential_required": {
+          "type": "boolean"
+        },
+        "dataset_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "refresh_interval_seconds": {
+          "type": "integer"
+        },
+        "required_for_now": {
+          "type": "boolean"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "source_type": {
+          "type": "string"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "source_id",
+        "name",
+        "source_type",
+        "dataset_id",
+        "url",
+        "required_for_now",
+        "credential_required",
+        "refresh_interval_seconds",
+        "notes"
+      ],
+      "type": "object"
+    },
+    "SourceType": {
+      "enum": [
+        "official",
+        "observed",
+        "model",
+        "fallback",
+        "scenario"
+      ],
+      "type": "string"
+    },
+    "SourcesResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "generated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceMetadata"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "generated_at",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "Status": {
+      "enum": [
+        "normal",
+        "watch",
+        "high",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "StatusThresholdsResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "calculation_inputs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "excluded_inputs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "raw_config": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "thresholds": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "generated_at",
+        "version",
+        "thresholds",
+        "calculation_inputs",
+        "excluded_inputs",
+        "raw_config"
+      ],
+      "type": "object"
+    },
+    "TwinComponentEstimate": {
+      "additionalProperties": false,
+      "properties": {
+        "component": {
+          "type": "string"
+        },
+        "formula": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "included_in_total": {
+          "type": "boolean"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provenance_kind": {
+          "$ref": "#/$defs/EstimateProvenanceKind"
+        },
+        "value": {
+          "$ref": "#/$defs/QuantifiedValue"
+        }
+      },
+      "required": [
+        "component",
+        "value",
+        "provenance_kind"
+      ],
+      "type": "object"
+    },
+    "TwinResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "from_time": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "hours": {
+          "type": "integer"
+        },
+        "region": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "snapshots": {
+          "items": {
+            "$ref": "#/$defs/TwinSnapshot"
+          },
+          "type": "array"
+        },
+        "unavailable_fields": {
+          "items": {
+            "$ref": "#/$defs/UnavailableField"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "generated_at",
+        "from_time",
+        "hours",
+        "region",
+        "snapshots",
+        "unavailable_fields"
+      ],
+      "type": "object"
+    },
+    "TwinSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "carbon_estimate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CarbonEstimate"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "demand_forecast": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ForecastInterval"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "event_time": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "exchange_estimate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExchangeEstimate"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "explanations": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Explanation"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "forecast_run": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ForecastRun"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "generation_availability_context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GenerationAvailabilityContext"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "generation_mix_estimate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EstimatedGenerationMix"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mode": {
+          "$ref": "#/$defs/DomainMode"
+        },
+        "model_cards": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/ModelCard"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "modelled_balance_contributions": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/ModelledBalanceContribution"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "modelled_national_balance_context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelledBalanceContext"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "national": {
+          "$ref": "#/$defs/NationalState"
+        },
+        "official_signal_context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OfficialSignal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provenance_chain": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/DataProvenance"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "quality": {
+          "$ref": "#/$defs/DataQuality"
+        },
+        "regional_demand_context": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/RegionalDemandForecast"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "regional_states": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/RegionalState"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scenario_result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ScenarioResult"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "snapshot_id": {
+          "type": "string"
+        },
+        "solar_estimate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TwinComponentEstimate"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/DataProvenance"
+        },
+        "unsupported_physical_behaviours": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "update_time": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "usual_demand_baseline": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QuantifiedValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "wind_estimate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TwinComponentEstimate"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "snapshot_id",
+        "mode",
+        "event_time",
+        "update_time",
+        "national",
+        "source",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "UnavailableField": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "Unit": {
+      "enum": [
+        "MW",
+        "GW",
+        "MWh",
+        "GWh",
+        "percentage",
+        "tonnes_CO2",
+        "gCO2_per_kWh"
+      ],
+      "type": "string"
+    }
+  },
+  "$id": "https://energy-pulse-france.local/contracts/energy-twin.schema.json",
+  "$ref": "#/$defs/TwinSnapshot",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Energy Pulse France Digital Twin Contracts",
+  "type": "object"
+}

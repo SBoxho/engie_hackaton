@@ -1,0 +1,18 @@
+{
+  "_fixture_note": "Synthetic Open-Meteo-shaped fixture for tests.",
+  "latitude": 48.8566,
+  "longitude": 2.3522,
+  "generationtime_ms": 0.1,
+  "utc_offset_seconds": 0,
+  "timezone": "GMT",
+  "timezone_abbreviation": "GMT",
+  "current": {
+    "time": "2026-06-18T10:00",
+    "interval": 900,
+    "temperature_2m": 21.4,
+    "wind_speed_10m": 9.2,
+    "cloud_cover": 35,
+    "shortwave_radiation": 520.0,
+    "relative_humidity_2m": 58
+  }
+}

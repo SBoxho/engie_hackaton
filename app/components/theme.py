@@ -115,7 +115,7 @@ def build_theme_css() -> str:
       color: var(--ep-text);
     }}
     .block-container {{
-      padding-top: 1.35rem;
+      padding-top: 2.05rem;
       max-width: 1160px;
     }}
     h1, h2, h3, h4, p, label, span, div {{
@@ -161,6 +161,8 @@ def build_theme_css() -> str:
     }}
     [data-testid="stMetricValue"] {{
       color: var(--ep-text);
+      max-width: 100%;
+      overflow-wrap: anywhere;
     }}
     [data-testid="stTextInput"] input,
     [data-testid="stSelectbox"] div,
@@ -209,6 +211,21 @@ def build_theme_css() -> str:
       line-height: 1.16;
       margin: 0 0 var(--ep-space-xs);
     }}
+    .ep-page-brand {{
+      color: var(--ep-green);
+      font-size: 1.08rem;
+      font-weight: 900;
+      line-height: 1.15;
+      margin: .2rem 0 .5rem;
+    }}
+    .ep-page-title {{
+      color: var(--ep-text);
+      font-size: clamp(1.95rem, 4vw, 2.55rem);
+      font-weight: 900;
+      line-height: 1.05;
+      margin: 0 0 var(--ep-space-sm);
+      overflow-wrap: anywhere;
+    }}
     .ep-section-copy {{
       color: var(--ep-muted);
       font-size: {TYPOGRAPHY["body"]};
@@ -222,9 +239,12 @@ def build_theme_css() -> str:
       border-radius: var(--ep-radius-md);
       box-shadow: var(--ep-card-shadow);
       padding: var(--ep-space-lg);
+      box-sizing: border-box;
+      min-width: 0;
+      max-width: 100%;
     }}
     .ep-metric-card {{
-      height: 178px;
+      min-height: 178px;
       overflow: hidden;
     }}
     .ep-driver-card {{
@@ -239,10 +259,13 @@ def build_theme_css() -> str:
     .ep-horizon-card.ep-border-red {{border-left-color: var(--ep-red);}}
     .ep-horizon-card.ep-border-grey {{border-left-color: #94a3b8;}}
     .ep-icon {{
-      width: 38px;
-      height: 38px;
+      display: inline-flex;
+      width: fit-content;
+      min-width: 38px;
+      min-height: 38px;
+      max-width: 100%;
+      box-sizing: border-box;
       border-radius: var(--ep-radius-sm);
-      display: flex;
       align-items: center;
       justify-content: center;
       background: rgba(20, 184, 166, .13);
@@ -250,12 +273,20 @@ def build_theme_css() -> str:
       border: 1px solid rgba(141, 245, 228, .28);
       font-size: 1.15rem;
       font-weight: 800;
+      line-height: 1.08;
+      text-align: center;
+      overflow-wrap: anywhere;
+      white-space: normal;
+      padding: .34rem .42rem;
       margin-bottom: var(--ep-space-md);
     }}
     .ep-label {{
       color: var(--ep-muted);
       font-size: 0.77rem;
       font-weight: 800;
+      line-height: 1.18;
+      max-width: 100%;
+      overflow-wrap: anywhere;
       text-transform: uppercase;
     }}
     .ep-value {{
@@ -276,11 +307,15 @@ def build_theme_css() -> str:
       font-weight: 800;
       line-height: 1.25;
       margin: .2rem 0 .4rem;
+      max-width: 100%;
+      overflow-wrap: anywhere;
     }}
     .ep-detail {{
       color: var(--ep-muted);
       font-size: {TYPOGRAPHY["body"]};
       line-height: 1.45;
+      max-width: 100%;
+      overflow-wrap: anywhere;
     }}
     .ep-metric-card .ep-detail {{
       display: -webkit-box;
@@ -292,18 +327,232 @@ def build_theme_css() -> str:
       font-size: .91rem;
     }}
     .ep-status {{
-      display: inline-flex;
-      align-items: center;
+      display: inline-block;
       width: fit-content;
+      height: auto !important;
+      flex: none !important;
+      align-self: flex-start !important;
+      min-width: 0;
+      min-height: 0 !important;
+      max-width: 100%;
+      max-height: 2rem;
+      box-sizing: border-box;
       border: 1px solid;
-      border-radius: var(--ep-radius-pill);
+      border-radius: var(--ep-radius-sm);
       padding: .24rem .62rem;
       font-size: .78rem;
       font-weight: 800;
       line-height: 1.2;
+      text-align: center;
+      overflow-wrap: anywhere;
+      white-space: normal;
       margin: .1rem .35rem .35rem 0;
     }}
     {_status_css()}
+    .ep-provenance-row, .ep-context-badges {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: .35rem;
+      align-items: center;
+    }}
+    .ep-provenance {{
+      display: inline-block;
+      gap: .32rem;
+      width: fit-content;
+      height: auto !important;
+      flex: none !important;
+      align-self: flex-start !important;
+      min-width: 0;
+      min-height: 0 !important;
+      max-width: 100%;
+      max-height: 2rem;
+      box-sizing: border-box;
+      border: 1px solid rgba(203, 213, 225, .3);
+      border-radius: var(--ep-radius-sm);
+      padding: .22rem .55rem;
+      background: rgba(15, 28, 44, .66);
+      color: #e0f2fe;
+      font-size: .74rem;
+      font-weight: 850;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }}
+    .ep-provenance-key {{
+      min-width: 0;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }}
+    .ep-provenance-official {{border-color: rgba(125, 211, 252, .45);}}
+    .ep-provenance-observed {{border-color: rgba(110, 231, 183, .42);}}
+    .ep-provenance-model {{border-color: rgba(251, 191, 36, .42);}}
+    .ep-provenance-modelled {{border-color: rgba(251, 191, 36, .42);}}
+    .ep-provenance-scenario {{border-color: rgba(147, 197, 253, .46);}}
+    .ep-provenance-fallback {{border-color: rgba(251, 146, 60, .5);}}
+    .ep-provenance-replay {{border-color: rgba(203, 213, 225, .38);}}
+    .ep-provenance-unavailable {{border-color: rgba(203, 213, 225, .38);}}
+    .ep-context-bar {{
+      display: grid;
+      grid-template-columns: minmax(170px, .9fr) minmax(140px, .9fr) minmax(210px, 1.2fr) minmax(210px, 1.2fr);
+      gap: var(--ep-space-md);
+      align-items: stretch;
+      margin: .25rem 0 var(--ep-space-lg);
+      padding: var(--ep-space-md);
+      background: rgba(7, 17, 29, .78);
+      border: 1px solid rgba(148, 163, 184, .22);
+      border-radius: var(--ep-radius-md);
+      box-shadow: var(--ep-card-shadow);
+    }}
+    .ep-context-main, .ep-context-item {{
+      min-width: 0;
+      padding: .55rem .65rem;
+      border: 1px solid rgba(148, 163, 184, .16);
+      border-radius: var(--ep-radius-sm);
+      background: rgba(15, 28, 44, .58);
+    }}
+    .ep-context-mode {{
+      color: #f8fafc;
+      font-size: 1.05rem;
+      font-weight: 900;
+      line-height: 1.18;
+    }}
+    .ep-context-demo {{
+      display: inline-flex;
+      width: fit-content;
+      max-width: 100%;
+      box-sizing: border-box;
+      margin-top: .35rem;
+      padding: .2rem .5rem;
+      border: 1px solid rgba(251, 191, 36, .46);
+      border-radius: var(--ep-radius-pill);
+      color: #fde68a;
+      background: rgba(180, 83, 9, .18);
+      font-size: .74rem;
+      font-weight: 900;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+      white-space: normal;
+      text-transform: uppercase;
+    }}
+    .ep-context-item span {{
+      display: block;
+      color: var(--ep-muted);
+      font-size: .72rem;
+      font-weight: 850;
+      text-transform: uppercase;
+      margin-bottom: .2rem;
+    }}
+    .ep-context-item strong {{
+      display: block;
+      color: var(--ep-text);
+      font-size: .92rem;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }}
+    .ep-context-item small {{
+      display: block;
+      color: #b6c7d8;
+      margin-top: .12rem;
+      font-size: .78rem;
+    }}
+    .ep-context-badges {{
+      grid-column: 1 / -1;
+      padding: .1rem .2rem;
+    }}
+    .ep-trust-stack {{
+      display: grid;
+      gap: var(--ep-space-sm);
+      margin: .2rem 0 var(--ep-space-lg);
+    }}
+    .ep-trust-state {{
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: var(--ep-space-md);
+      align-items: start;
+      padding: var(--ep-space-md) var(--ep-space-lg);
+      border: 1px solid rgba(148, 163, 184, .22);
+      border-radius: var(--ep-radius-md);
+      background: rgba(15, 28, 44, .7);
+    }}
+    .ep-trust-label {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: fit-content;
+      min-width: min(76px, 100%);
+      max-width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+      padding: .24rem .5rem;
+      border: 1px solid rgba(203, 213, 225, .32);
+      border-radius: var(--ep-radius-pill);
+      color: #e0f2fe;
+      font-size: .72rem;
+      font-weight: 900;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+      white-space: normal;
+      text-transform: uppercase;
+    }}
+    .ep-trust-title {{
+      color: var(--ep-text);
+      font-weight: 850;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }}
+    .ep-trust-body {{
+      color: var(--ep-muted);
+      font-size: .92rem;
+      line-height: 1.42;
+      margin-top: .1rem;
+    }}
+    .ep-trust-stale .ep-trust-label,
+    .ep-trust-fallback .ep-trust-label,
+    .ep-trust-partial .ep-trust-label {{
+      color: #fde68a;
+      border-color: rgba(251, 191, 36, .42);
+      background: rgba(180, 83, 9, .16);
+    }}
+    .ep-trust-error .ep-trust-label {{
+      color: #fca5a5;
+      border-color: rgba(248, 113, 113, .48);
+      background: rgba(239, 68, 68, .17);
+    }}
+    .ep-term {{
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      border-bottom: 1px dotted rgba(186, 230, 253, .7);
+      outline: none;
+    }}
+    .ep-term:focus-visible {{
+      box-shadow: 0 0 0 3px rgba(125, 211, 252, .28);
+      border-radius: var(--ep-radius-sm);
+    }}
+    .ep-term abbr {{
+      text-decoration: none;
+      cursor: help;
+    }}
+    .ep-term-popover {{
+      position: absolute;
+      left: 0;
+      bottom: calc(100% + .45rem);
+      z-index: 5;
+      width: min(280px, 80vw);
+      opacity: 0;
+      pointer-events: none;
+      background: #07111d;
+      border: 1px solid rgba(125, 211, 252, .34);
+      border-radius: var(--ep-radius-md);
+      color: #e2e8f0;
+      padding: .65rem .75rem;
+      box-shadow: var(--ep-card-shadow);
+      font-size: .86rem;
+      line-height: 1.35;
+    }}
+    .ep-term:hover .ep-term-popover,
+    .ep-term:focus .ep-term-popover {{
+      opacity: 1;
+    }}
     .ep-box {{
       border: 1px solid;
       border-radius: var(--ep-radius-md);
@@ -331,11 +580,198 @@ def build_theme_css() -> str:
     .ep-explanation-card {{
       border-left: 4px solid var(--ep-green);
     }}
+    .ep-explanation-card-link {{
+      position: relative;
+      cursor: pointer;
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }}
+    .ep-explanation-card-link:hover {{
+      transform: translateY(-2px);
+      box-shadow: 0 14px 28px rgba(0, 0, 0, .32);
+      border-color: var(--ep-green);
+    }}
+    .ep-card-stretched-link {{
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      text-decoration: none;
+      border-radius: inherit;
+    }}
+    .ep-card-stretched-link:focus-visible {{
+      outline: 2px solid var(--ep-green);
+      outline-offset: 2px;
+    }}
     .ep-card-row {{
       display: flex;
       flex-wrap: wrap;
       gap: var(--ep-space-sm);
       align-items: center;
+      min-width: 0;
+      max-width: 100%;
+    }}
+    .ep-page-head {{
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--ep-space-lg);
+      margin: .25rem 0 var(--ep-space-md);
+    }}
+    .ep-ribbon-cell {{
+      min-height: 92px;
+      background: rgba(15, 28, 44, .78);
+      border: 1px solid rgba(148, 163, 184, .18);
+      border-radius: var(--ep-radius-md);
+      padding: var(--ep-space-md);
+    }}
+    .ep-ribbon-cell .ep-value {{
+      font-size: 1rem;
+      line-height: 1.18;
+    }}
+    .ep-now-hero {{
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(260px, .75fr);
+      gap: var(--ep-space-lg);
+      align-items: stretch;
+      min-width: 0;
+      box-sizing: border-box;
+      margin: .35rem 0 var(--ep-space-lg);
+      padding: clamp(1rem, 2.5vw, 1.65rem);
+      border: 1px solid rgba(148, 163, 184, .22);
+      border-radius: var(--ep-radius-md);
+      background: linear-gradient(135deg, rgba(15, 28, 44, .96), rgba(8, 47, 73, .74));
+      box-shadow: var(--ep-card-shadow);
+    }}
+    .ep-now-hero h1 {{
+      color: var(--ep-text);
+      font-size: clamp(2.2rem, 4.8vw, 4rem);
+      line-height: 1;
+      margin: .1rem 0 .65rem;
+      font-weight: 900;
+    }}
+    .ep-now-hero p {{
+      color: #d7e4ef;
+      font-size: 1.08rem;
+      line-height: 1.45;
+      max-width: 780px;
+      overflow-wrap: anywhere;
+      margin: 0;
+    }}
+    .ep-now-hero-grid {{
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--ep-space-md);
+    }}
+    .ep-now-hero-grid div {{
+      min-width: 0;
+      padding: var(--ep-space-md);
+      border: 1px solid rgba(148, 163, 184, .18);
+      border-radius: var(--ep-radius-sm);
+      background: rgba(7, 17, 29, .46);
+    }}
+    .ep-now-hero-grid span {{
+      display: block;
+      color: var(--ep-muted);
+      font-size: .72rem;
+      font-weight: 850;
+      text-transform: uppercase;
+      margin-bottom: .22rem;
+    }}
+    .ep-now-hero-grid strong {{
+      display: block;
+      color: var(--ep-text);
+      font-size: 1rem;
+      line-height: 1.28;
+      overflow-wrap: anywhere;
+    }}
+    .ep-now-hero-grid small {{
+      color: #b6c7d8;
+      display: block;
+      margin-top: .18rem;
+    }}
+    .ep-status-row-wrap {{
+      display: grid;
+      gap: var(--ep-space-md);
+      margin: .35rem 0 var(--ep-space-lg);
+    }}
+    .ep-source-status-row {{
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: var(--ep-space-md);
+      align-items: start;
+      padding: var(--ep-space-lg);
+      border: 1px solid rgba(125, 211, 252, .24);
+      border-radius: var(--ep-radius-md);
+      background: rgba(15, 28, 44, .78);
+      box-shadow: var(--ep-card-shadow);
+    }}
+    .ep-source-status-row > div {{
+      min-width: 0;
+    }}
+    .ep-source-status-modelled {{
+      border-color: rgba(251, 191, 36, .28);
+    }}
+    .ep-status-actions {{
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-items: flex-start;
+      align-content: flex-start;
+      gap: .25rem;
+      min-width: 0;
+      max-width: 100%;
+    }}
+    .ep-status-actions .ep-status,
+    .ep-status-actions .ep-provenance,
+    .ep-card-row .ep-status,
+    .ep-card-row .ep-provenance {{
+      display: inline-block !important;
+      width: fit-content !important;
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: 2rem !important;
+      align-self: flex-start !important;
+      flex: none !important;
+      place-self: start;
+      border-radius: var(--ep-radius-sm) !important;
+    }}
+    .ep-source-status-row .ep-status,
+    .ep-source-status-row .ep-provenance {{
+      display: inline-block !important;
+      width: fit-content !important;
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: 2rem !important;
+      align-self: flex-start !important;
+      flex: none !important;
+      border-radius: var(--ep-radius-sm) !important;
+    }}
+    .ep-status-source {{
+      grid-column: 1 / -1;
+      color: var(--ep-muted);
+      font-size: .88rem;
+      line-height: 1.35;
+      padding-top: .15rem;
+      border-top: 1px solid rgba(148, 163, 184, .14);
+    }}
+    .ep-next12 {{
+      margin: .25rem 0 var(--ep-space-lg);
+    }}
+    .ep-next12-date {{
+      color: #bae6fd;
+      font-size: .76rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      margin: .7rem 0 .35rem;
+    }}
+    .ep-next12 div[data-testid="stButton"] button {{
+      min-height: 82px;
+      padding: .42rem .35rem;
+      border-radius: var(--ep-radius-sm);
+      white-space: pre-line;
+      line-height: 1.18;
+      font-size: .84rem;
+      font-weight: 760;
+      overflow-wrap: anywhere;
     }}
     .ep-story-grid {{
       display: grid;
@@ -353,9 +789,12 @@ def build_theme_css() -> str:
       padding: var(--ep-space-lg);
     }}
     .ep-story-number {{
-      width: 34px;
-      height: 34px;
       display: inline-flex;
+      width: fit-content;
+      min-width: 34px;
+      min-height: 34px;
+      max-width: 100%;
+      box-sizing: border-box;
       align-items: center;
       justify-content: center;
       border-radius: var(--ep-radius-sm);
@@ -363,6 +802,9 @@ def build_theme_css() -> str:
       background: #e0f2fe;
       color: #082f49;
       font-weight: 900;
+      line-height: 1.08;
+      overflow-wrap: anywhere;
+      padding: .28rem .42rem;
       border: 1px solid rgba(224, 242, 254, .72);
     }}
     .ep-source-wrap {{
@@ -377,7 +819,12 @@ def build_theme_css() -> str:
     .ep-source-badge {{
       display: inline-flex;
       align-items: center;
+      flex-wrap: wrap;
       gap: .42rem;
+      width: fit-content;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
       border: 1px solid rgba(203, 213, 225, .34);
       border-radius: var(--ep-radius-pill);
       padding: .42rem .72rem;
@@ -386,12 +833,17 @@ def build_theme_css() -> str:
       font-size: .84rem;
       font-weight: 800;
       line-height: 1.1;
+      overflow-wrap: anywhere;
+      white-space: normal;
     }}
     .ep-source-badge small {{
       color: #cbd5e1;
       font-size: .74rem;
       font-weight: 650;
       margin-left: .1rem;
+      min-width: 0;
+      max-width: 100%;
+      overflow-wrap: anywhere;
     }}
     .ep-source-dot {{
       width: .56rem;
@@ -412,6 +864,9 @@ def build_theme_css() -> str:
       border: 1px solid rgba(148, 163, 184, .2);
       border-radius: var(--ep-radius-md);
     }}
+    .ep-viz-note > div {{
+      min-width: 0;
+    }}
     .ep-viz-title {{
       color: var(--ep-text);
       font-weight: 850;
@@ -425,7 +880,10 @@ def build_theme_css() -> str:
     }}
     .ep-viz-source {{
       display: inline-flex;
-      white-space: nowrap;
+      width: fit-content;
+      max-width: 100%;
+      box-sizing: border-box;
+      white-space: normal;
       color: #bae6fd;
       border: 1px solid rgba(125, 211, 252, .32);
       background: rgba(14, 116, 144, .16);
@@ -433,6 +891,60 @@ def build_theme_css() -> str:
       padding: .24rem .55rem;
       font-size: .75rem;
       font-weight: 850;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }}
+    .ep-chain {{
+      display: grid;
+      grid-template-columns: minmax(130px, 1fr) auto minmax(130px, 1fr) auto minmax(130px, 1fr) auto minmax(130px, 1fr) auto minmax(130px, 1fr);
+      gap: var(--ep-space-sm);
+      align-items: stretch;
+      margin: .55rem 0 var(--ep-space-xl);
+    }}
+    .ep-chain-node {{
+      min-width: 0;
+      min-height: 150px;
+      padding: var(--ep-space-md);
+      border: 1px solid rgba(148, 163, 184, .22);
+      border-radius: var(--ep-radius-md);
+      background: linear-gradient(145deg, rgba(15, 28, 44, .94), rgba(8, 47, 73, .58));
+      box-shadow: var(--ep-card-shadow);
+    }}
+    .ep-chain-index {{
+      display: inline-flex;
+      width: fit-content;
+      min-width: 30px;
+      min-height: 30px;
+      max-width: 100%;
+      box-sizing: border-box;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--ep-radius-sm);
+      margin-bottom: var(--ep-space-sm);
+      background: rgba(224, 242, 254, .92);
+      color: #082f49;
+      font-weight: 900;
+      line-height: 1.08;
+      overflow-wrap: anywhere;
+      padding: .24rem .36rem;
+    }}
+    .ep-chain-node .ep-title {{
+      font-size: .98rem;
+      line-height: 1.18;
+      margin-bottom: .25rem;
+    }}
+    .ep-chain-node .ep-detail {{
+      font-size: .86rem;
+      line-height: 1.34;
+    }}
+    .ep-chain-arrow {{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #93c5fd;
+      font-size: 1.25rem;
+      font-weight: 900;
+      padding: 0 .05rem;
     }}
     .ep-why-grid {{
       display: grid;
@@ -474,6 +986,7 @@ def build_theme_css() -> str:
       font-size: 1.28rem;
       font-weight: 850;
       margin: .2rem 0 .28rem;
+      overflow-wrap: anywhere;
     }}
     .ep-footer-team {{
       color: #e0f2fe;
@@ -481,10 +994,25 @@ def build_theme_css() -> str:
       text-align: right;
     }}
     @media (max-width: 760px) {{
+      html, body, .stApp {{
+        overflow-x: hidden;
+      }}
+      div[data-testid="stAppViewContainer"],
+      div[data-testid="stMain"],
+      main,
+      .block-container {{
+        min-width: 0 !important;
+        max-width: 100vw !important;
+        width: 100% !important;
+        box-sizing: border-box;
+      }}
+      div[data-testid="stHorizontalBlock"] {{
+        flex-wrap: wrap;
+      }}
       .block-container {{
         padding-left: 1rem;
         padding-right: 1rem;
-        padding-top: 1.25rem;
+        padding-top: 1.75rem;
       }}
       .ep-hero {{
         font-size: 2.45rem;
@@ -495,8 +1023,41 @@ def build_theme_css() -> str:
       .ep-metric-card, .ep-driver-card, .ep-horizon-card {{
         min-height: auto;
       }}
-      .ep-story-grid, .ep-why-grid, .ep-how-grid {{
+      .ep-story-grid, .ep-why-grid, .ep-how-grid, .ep-chain {{
         grid-template-columns: 1fr;
+      }}
+      .ep-chain-node {{
+        min-height: auto;
+      }}
+      .ep-chain-arrow {{
+        display: none;
+      }}
+      .ep-now-hero, .ep-source-status-row {{
+        grid-template-columns: 1fr;
+        width: 100%;
+        max-width: 100%;
+      }}
+      .ep-context-bar,
+      .ep-trust-state,
+      .ep-status-row-wrap,
+      .ep-viz-note,
+      .ep-card,
+      .ep-metric-card,
+      .ep-driver-card,
+      .ep-explanation-card,
+      .ep-horizon-card {{
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+      }}
+      .ep-section-copy,
+      .ep-detail,
+      .ep-trust-body,
+      .ep-source-status-row {{
+        overflow-wrap: anywhere;
+      }}
+      .ep-status-actions {{
+        justify-content: flex-start;
       }}
       .ep-story-step {{
         min-height: auto;
@@ -505,11 +1066,22 @@ def build_theme_css() -> str:
         flex-direction: column;
         align-items: stretch;
       }}
+      .ep-context-bar {{
+        grid-template-columns: 1fr;
+      }}
+      .ep-trust-state {{
+        grid-template-columns: 1fr;
+      }}
       .ep-viz-source {{
         width: fit-content;
       }}
       .ep-footer-team {{
         text-align: left;
+      }}
+    }}
+    @media (min-width: 761px) and (max-width: 1120px) {{
+      .ep-context-bar {{
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }}
     }}
     </style>

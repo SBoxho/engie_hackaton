@@ -4,6 +4,8 @@ import html
 
 import streamlit as st
 
+from app.components.foundation import provenance_badge_html
+
 
 STATUS_ALIASES = {
     "calm": "green",
@@ -22,6 +24,7 @@ STATUS_ALIASES = {
     "red": "red",
     "blue": "blue",
     "info": "blue",
+    "simulation": "blue",
     "light": "blue",
     "low-carbon": "blue",
     "model edge detected": "green",
@@ -32,6 +35,7 @@ STATUS_ALIASES = {
     "gray": "grey",
     "unknown": "grey",
     "muted": "grey",
+    "unavailable": "grey",
 }
 
 
@@ -48,23 +52,27 @@ def metric_card(
     *,
     icon: str | None = None,
     status: str | None = None,
+    provenance: str | None = None,
 ) -> None:
     """Render a compact product-style metric card."""
     badge = status_badge_html(status, status) if status else ""
+    provenance_html = provenance_badge_html(provenance) if provenance else ""
     icon_html = f'<div class="ep-icon">{html.escape(icon)}</div>' if icon else ""
     detail_html = f'<div class="ep-detail">{html.escape(detail)}</div>' if detail else ""
+    # Build as a single line: indented multi-line templates can trigger
+    # CommonMark's "blank line closes HTML block" + 4-space code-block rule
+    # when {badge} or {provenance_html} is empty, surfacing raw HTML as text.
     st.markdown(
-        f"""
-        <div class="ep-metric-card">
-          {icon_html}
-          <div class="ep-card-row">
-            <div class="ep-label">{html.escape(label)}</div>
-            {badge}
-          </div>
-          <div class="ep-value">{html.escape(value)}</div>
-          {detail_html}
-        </div>
-        """,
+        f'<div class="ep-metric-card" aria-label="{html.escape(label)}: {html.escape(value)}">'
+        f'{icon_html}'
+        f'<div class="ep-card-row">'
+        f'<div class="ep-label">{html.escape(label)}</div>'
+        f'{badge}'
+        f'{provenance_html}'
+        f'</div>'
+        f'<div class="ep-value">{html.escape(value)}</div>'
+        f'{detail_html}'
+        f'</div>',
         unsafe_allow_html=True,
     )
 
@@ -75,7 +83,10 @@ def status_badge(label: str, status: str | None = None) -> None:
 
 def status_badge_html(label: str | None, status: str | None = None) -> str:
     text = label or "Unknown"
-    return f'<span class="ep-status ep-status-{status_key(status or text)}">{html.escape(text)}</span>'
+    return (
+        f'<span class="ep-status ep-status-{status_key(status or text)}" role="status" '
+        f'aria-label="Status: {html.escape(text)}">{html.escape(text)}</span>'
+    )
 
 
 def section_header(kicker: str, title: str, copy: str | None = None) -> None:
@@ -146,21 +157,34 @@ def explanation_card(
     label: str | None = None,
     icon: str | None = None,
     status: str | None = None,
+    provenance: str | None = None,
+    href: str | None = None,
 ) -> None:
     icon_html = f'<div class="ep-icon">{html.escape(icon)}</div>' if icon else ""
     label_html = f'<div class="ep-label">{html.escape(label)}</div>' if label else ""
     badge = status_badge_html(status, status) if status else ""
-    st.markdown(
-        f"""
-        <div class="ep-explanation-card">
-          {icon_html}
-          <div class="ep-card-row">{label_html}{badge}</div>
-          <div class="ep-title">{html.escape(title)}</div>
-          <div class="ep-detail">{html.escape(detail)}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    provenance_html = provenance_badge_html(provenance) if provenance else ""
+    body = (
+        f"{icon_html}"
+        f'<div class="ep-card-row">{label_html}{badge}{provenance_html}</div>'
+        f'<div class="ep-title">{html.escape(title)}</div>'
+        f'<div class="ep-detail">{html.escape(detail)}</div>'
     )
+    if href:
+        link = (
+            f'<a class="ep-card-stretched-link" href="{html.escape(href)}" '
+            f'target="_self" aria-label="{html.escape(title)}"></a>'
+        )
+        st.markdown(
+            f'<div class="ep-explanation-card ep-explanation-card-link" '
+            f'aria-label="{html.escape(title)}">{link}{body}</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f'<div class="ep-explanation-card" aria-label="{html.escape(title)}">{body}</div>',
+            unsafe_allow_html=True,
+        )
 
 
 def message_box(title: str, body: str, *, kind: str = "info") -> None:
@@ -199,12 +223,20 @@ def horizon_forecast_card(
     )
 
 
-def driver_card(icon: str, title: str, detail: str, *, label: str = "Driver") -> None:
+def driver_card(
+    icon: str,
+    title: str,
+    detail: str,
+    *,
+    label: str = "Driver",
+    provenance: str | None = None,
+) -> None:
+    provenance_html = provenance_badge_html(provenance) if provenance else ""
     st.markdown(
         f"""
-        <div class="ep-driver-card">
+        <div class="ep-driver-card" aria-label="{html.escape(label)}: {html.escape(title)}">
           <div class="ep-icon">{html.escape(icon)}</div>
-          <div class="ep-label">{html.escape(label)}</div>
+          <div class="ep-card-row"><div class="ep-label">{html.escape(label)}</div>{provenance_html}</div>
           <div class="ep-title">{html.escape(title)}</div>
           <div class="ep-detail">{html.escape(detail)}</div>
         </div>

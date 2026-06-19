@@ -9,6 +9,8 @@ import pandas as pd
 import requests
 
 from src.config import settings
+from src.public_data.contracts import SourceUnavailableError
+from src.public_data.http import PublicDataHttpClient
 from src.utils.io import latest_file, read_json, timestamped_path, write_json
 from src.utils.logging import get_logger
 from src.utils.time import iso_utc
@@ -76,6 +78,7 @@ def fetch_eco2mix(
         f'AND date_heure <= "{iso_utc(end)}"'
     )
     client = session or requests.Session()
+    http_client = None if session is not None else PublicDataHttpClient(source_name="rte_eco2mix_national")
     records: list[dict[str, Any]] = []
     offset = 0
     total = None
@@ -88,10 +91,13 @@ def fetch_eco2mix(
             "order_by": "date_heure asc",
         }
         try:
-            response = client.get(_records_url(), params=params, timeout=timeout)
-            response.raise_for_status()
-            payload = response.json()
-        except (requests.RequestException, ValueError) as exc:
+            if http_client is None:
+                response = client.get(_records_url(), params=params, timeout=timeout)
+                response.raise_for_status()
+                payload = response.json()
+            else:
+                payload = http_client.get_json(_records_url(), params=params)
+        except (requests.RequestException, SourceUnavailableError, ValueError) as exc:
             raise Eco2MixError(f"Failed to fetch éCO2mix data: {exc}") from exc
 
         batch = payload.get("results")
@@ -133,4 +139,3 @@ def load_cached_eco2mix(path: Path | None = None, cache_dir: Path | None = None)
     _validate(frame)
     LOGGER.info("Loaded %s cached éCO2mix records from %s", len(frame), path)
     return frame
-

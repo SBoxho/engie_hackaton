@@ -1,0 +1,27 @@
+{
+  "desktop_preview": {
+    "path": "artifacts\\next48h-chart-preview-desktop.png",
+    "size": [
+      1400,
+      760
+    ],
+    "unique_colors": 358,
+    "non_background_pixels": 981213
+  },
+  "mobile_preview": {
+    "path": "artifacts\\next48h-chart-preview-mobile.png",
+    "size": [
+      760,
+      980
+    ],
+    "unique_colors": 357,
+    "non_background_pixels": 678393
+  },
+  "chart_html": "artifacts\\next48h-forecast-chart.html",
+  "regional_map_html": "artifacts\\next48h-future-regional-map.html",
+  "selected_timestamp": "2026-06-19T10:00:00+00:00",
+  "latest_actual_timestamp": "2026-06-19T01:15:00+00:00",
+  "aligned_twin_used": false,
+  "forecast_rows": 48,
+  "regional_rows": 13
+}
