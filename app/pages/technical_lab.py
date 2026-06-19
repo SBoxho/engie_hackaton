@@ -4,9 +4,10 @@ import streamlit as st
 
 from app.components.cards import explanation_card, section_header
 from app.components.public import render_public_header
+from app.i18n import nav_label
 
 render_public_header(
-    "Technical lab",
+    nav_label("technical_lab"),
     "Engineering workbench",
     "Development, diagnostics, and model audit pages are kept out of the public decision loop.",
 )

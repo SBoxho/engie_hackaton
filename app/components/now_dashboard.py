@@ -16,12 +16,16 @@ from app.formatting import (
     UNAVAILABLE,
     format_age_seconds,
     format_carbon,
+    format_date,
     format_gw,
     format_mw,
+    format_number,
     format_percentage,
     format_signed_mw,
+    format_temperature,
     format_timestamp,
 )
+from app.i18n import t
 from app.state import select_timestamp_from_options
 from app.view_models import ForecastPointView, GridSnapshotView
 from src.contracts.energy_twin import (
@@ -84,36 +88,53 @@ def build_hero_summary(
     *,
     timezone_name: str,
     forecast_points: list[ForecastPointView] | None = None,
+    locale: str = "en",
 ) -> HeroSummary:
     demand = _current_demand(current_state, snapshot)
     pct = _current_anomaly_pct(current_state, snapshot)
     diff_gw = _current_difference_gw(current_state, snapshot)
     freshness = current_state.national_context.freshness if current_state is not None else None
     update_time = freshness.timestamp if freshness is not None and freshness.timestamp is not None else snapshot.as_of
-    age = format_age_seconds(freshness.age_seconds) if freshness is not None else snapshot.freshness.get("label", "")
+    age = (
+        _localize_unavailable(format_age_seconds(freshness.age_seconds, locale=locale), locale)
+        if freshness is not None
+        else str(snapshot.freshness.get("label", ""))
+    )
     return HeroSummary(
-        demand_gw=format_gw(demand),
-        unusual_text=demand_difference_text(pct),
-        difference_gw=_format_gw_delta(diff_gw),
-        main_driver=main_driver_text(current_state, twin, snapshot),
-        direction=near_term_direction(twin, demand, forecast_points=forecast_points),
-        last_update=format_timestamp(update_time, timezone_name=timezone_name),
+        demand_gw=_format_gw_text(demand, locale=locale),
+        unusual_text=demand_difference_text(pct, locale=locale),
+        difference_gw=_format_gw_delta(diff_gw, locale=locale),
+        main_driver=main_driver_text(current_state, twin, snapshot, locale=locale),
+        direction=near_term_direction(twin, demand, forecast_points=forecast_points, locale=locale),
+        last_update=_localize_unavailable(format_timestamp(update_time, timezone_name=timezone_name, locale=locale), locale),
         freshness=age,
     )
 
 
-def render_hero_summary(summary: HeroSummary) -> None:
+def render_hero_summary(summary: HeroSummary, *, locale: str = "en") -> None:
+    aria_label = t("now.hero.aria", locale=locale)
+    eyebrow = t("now.hero.eyebrow", locale=locale)
+    title = t("now.hero.title", locale=locale, demand=summary.demand_gw)
+    body = t(
+        "now.hero.body",
+        locale=locale,
+        unusual=summary.unusual_text,
+        difference=summary.difference_gw,
+        driver=summary.main_driver,
+    )
+    near_term_label = t("now.hero.near_term_direction", locale=locale)
+    last_update_label = t("now.hero.last_update", locale=locale)
     st.markdown(
         f"""
-        <section class="ep-now-hero" aria-label="Plain-language current electricity summary">
+        <section class="ep-now-hero" aria-label="{html.escape(aria_label)}">
           <div>
-            <div class="ep-eyebrow">What is happening now?</div>
-            <h1>{html.escape(summary.demand_gw)} national demand</h1>
-            <p>{html.escape(summary.unusual_text)} ({html.escape(summary.difference_gw)} versus usual). {html.escape(summary.main_driver)}</p>
+            <div class="ep-eyebrow">{html.escape(eyebrow)}</div>
+            <h1>{html.escape(title)}</h1>
+            <p>{html.escape(body)}</p>
           </div>
           <div class="ep-now-hero-grid">
-            <div><span>Near-term direction</span><strong>{html.escape(summary.direction)}</strong></div>
-            <div><span>Last update</span><strong>{html.escape(summary.last_update)}</strong><small>{html.escape(summary.freshness)}</small></div>
+            <div><span>{html.escape(near_term_label)}</span><strong>{html.escape(summary.direction)}</strong></div>
+            <div><span>{html.escape(last_update_label)}</span><strong>{html.escape(summary.last_update)}</strong><small>{html.escape(summary.freshness)}</small></div>
           </div>
         </section>
         """,
@@ -126,18 +147,23 @@ def render_next_12h_ribbon(
     selected: datetime | None,
     *,
     timezone_name: str,
+    locale: str = "en",
 ) -> datetime | None:
     snapshots = next_12_snapshots(twin)
     if not snapshots:
-        st.info("Next-12-hours forecast context is unavailable.")
+        st.info(t("now.forecast.unavailable_info", locale=locale))
         return selected
 
     options = [pd.Timestamp(item.event_time) for item in snapshots]
     index = select_timestamp_from_options(options, selected)
     selected_ts = options[index]
     selected_day: str | None = None
-    st.markdown('<div class="ep-next12" role="group" aria-label="Next 12 hours">', unsafe_allow_html=True)
-    for day, group in _snapshot_groups_by_local_day(snapshots, timezone_name):
+    aria_label = t("now.forecast.aria", locale=locale)
+    st.markdown(
+        f'<div class="ep-next12" role="group" aria-label="{html.escape(aria_label)}">',
+        unsafe_allow_html=True,
+    )
+    for day, group in _snapshot_groups_by_local_day(snapshots, timezone_name, locale=locale):
         if day != selected_day:
             selected_day = day
             st.markdown(f'<div class="ep-next12-date">{html.escape(day)}</div>', unsafe_allow_html=True)
@@ -148,9 +174,10 @@ def render_next_12h_ribbon(
             status_text = _status_display(
                 item.modelled_national_balance_context.status
                 if item.modelled_national_balance_context is not None
-                else Status.UNKNOWN
+                else Status.UNKNOWN,
+                locale=locale,
             )
-            label = f"{local:%H:%M}\n{status_text}\n{format_gw(demand)}"
+            label = f"{local:%H:%M}\n{status_text}\n{_format_gw_text(demand, locale=locale)}"
             with column:
                 if st.button(
                     label,
@@ -168,24 +195,29 @@ def render_forecast_point_ribbon(
     selected: datetime | None,
     *,
     timezone_name: str,
+    locale: str = "en",
 ) -> datetime | None:
     if not points:
-        st.info("Next-12-hours forecast context is unavailable.")
+        st.info(t("now.forecast.unavailable_info", locale=locale))
         return selected
     visible = points[:12]
     options = [pd.Timestamp(point.timestamp) for point in visible]
     index = select_timestamp_from_options(options, selected)
     selected_ts = options[index]
     selected_day: str | None = None
-    st.markdown('<div class="ep-next12" role="group" aria-label="Next 12 hours">', unsafe_allow_html=True)
-    for day, group in _forecast_groups_by_local_day(visible, timezone_name):
+    aria_label = t("now.forecast.aria", locale=locale)
+    st.markdown(
+        f'<div class="ep-next12" role="group" aria-label="{html.escape(aria_label)}">',
+        unsafe_allow_html=True,
+    )
+    for day, group in _forecast_groups_by_local_day(visible, timezone_name, locale=locale):
         if day != selected_day:
             selected_day = day
             st.markdown(f'<div class="ep-next12-date">{html.escape(day)}</div>', unsafe_allow_html=True)
         columns = st.columns(len(group), gap="small")
         for column, point in zip(columns, group):
             local = point.timestamp.tz_convert(timezone_name)
-            label = f"{local:%H:%M}\n{point.pressure_label}\n{format_gw(point.p50)}"
+            label = f"{local:%H:%M}\n{_status_display(point.pressure_label, locale=locale)}\n{_format_gw_text(point.p50, locale=locale)}"
             with column:
                 if st.button(
                     label,
@@ -216,6 +248,8 @@ def selected_forecast_point(
 def current_weather_summary(
     live_payload: dict[str, Any] | None,
     fallback: dict[str, Any] | None,
+    *,
+    locale: str = "en",
 ) -> dict[str, Any]:
     """Merge a live Open-Meteo current payload with the snapshot's fallback weather.
 
@@ -240,53 +274,57 @@ def current_weather_summary(
     temp = base.get("temperature_c")
     wind = base.get("wind_kmh")
     if temp is None and wind is None:
-        base.setdefault("headline", "Weather unavailable")
-        base.setdefault("detail", "Weather context is unavailable for this snapshot.")
+        base["headline"] = t("now.weather.unavailable_headline", locale=locale)
+        base["detail"] = t("now.weather.unavailable_detail", locale=locale)
         return base
 
     temp_value = 0.0 if temp is None else float(temp)
     wind_value = 0.0 if wind is None else float(wind)
     cloud_value = float(base.get("cloud_pct") or 0.0)
-    if temp_value <= 5:
-        base["headline"] = "Cold demand lift"
-    elif temp_value >= 27:
-        base["headline"] = "Heat demand lift"
-    elif wind_value >= 35:
-        base["headline"] = "Wind output context"
-    else:
-        base["headline"] = "Mild weather"
-    base["detail"] = f"{temp_value:.1f} °C, wind {wind_value:.0f} km/h, cloud {cloud_value:.0f}%."
+    base["headline"] = _weather_headline_for_values(temp_value, wind_value, locale=locale)
+    base["detail"] = _weather_detail_for_values(temp_value, wind_value, cloud_value, locale=locale)
     base["temperature_c"] = temp_value
     base["wind_kmh"] = wind_value
     base["cloud_pct"] = cloud_value
     return base
 
 
-def render_selected_forecast_context(point: ForecastPointView | None, *, timezone_name: str) -> None:
+def render_selected_forecast_context(point: ForecastPointView | None, *, timezone_name: str, locale: str = "en") -> None:
     if point is None:
         explanation_card(
-            "Selected-hour forecast unavailable",
-            "No forecast point is available for the selected hour.",
-            label="Selected hour",
-            status="unknown",
+            t("now.forecast.unavailable_title", locale=locale),
+            t("now.forecast.unavailable_body", locale=locale),
+            label=t("now.forecast.unavailable_label", locale=locale),
             provenance="unavailable",
         )
         return
-    local = point.timestamp.tz_convert(timezone_name)
+    timestamp_text = _localize_unavailable(
+        format_timestamp(point.timestamp, timezone_name=timezone_name, locale=locale),
+        locale,
+    )
     explanation_card(
-        f"{local:%a %d %b %H:%M}: {format_gw(point.p50)}",
-        f"{point.pressure_label}. Forecast route: {point.source}. This context is modelled and is not an official warning.",
-        label="Selected-hour forecast context",
-        status=point.pressure_label,
+        t(
+            "now.forecast.title",
+            locale=locale,
+            timestamp=timestamp_text,
+            demand=_format_gw_text(point.p50, locale=locale),
+        ),
+        t(
+            "now.forecast.detail",
+            locale=locale,
+            status=_status_display(point.pressure_label, locale=locale),
+            source=_route_label(point.source, locale=locale),
+        ),
+        label=t("now.forecast.label", locale=locale),
         provenance="modelled",
     )
 
 
-def build_current_state_map_frame(current_state: CurrentStateResponse | None) -> pd.DataFrame:
+def build_current_state_map_frame(current_state: CurrentStateResponse | None, *, locale: str = "en") -> pd.DataFrame:
     if current_state is None:
         return pd.DataFrame()
     freshness = current_state.selected_region_context.freshness
-    freshness_label = freshness_label_text(freshness.state, freshness.age_seconds)
+    freshness_label = freshness_label_text(freshness.state, freshness.age_seconds, locale=locale)
     records: list[dict[str, Any]] = []
     for region in current_state.map:
         observed = region.observed_demand.value
@@ -298,27 +336,28 @@ def build_current_state_map_frame(current_state: CurrentStateResponse | None) ->
                 "region_code": region.region_id,
                 "region_display": region.region_name,
                 "demand_anomaly_pct": anomaly,
-                "demand_anomaly_label": demand_difference_text(anomaly, already_percent=True),
+                "demand_anomaly_label": demand_difference_text(anomaly, already_percent=True, locale=locale),
                 "consumption_mw": observed,
                 "usual_demand_mw": usual,
                 "difference_mw": difference,
-                "demand_label": format_mw(observed),
-                "usual_label": format_mw(usual),
-                "difference_label": format_signed_mw(difference),
+                "demand_label": _format_mw_text(observed, locale=locale),
+                "usual_label": _format_mw_text(usual, locale=locale),
+                "difference_label": _format_signed_mw_text(difference, locale=locale),
                 "freshness_label": freshness_label,
-                "source_label": source_quality_label(region.source_quality),
+                "source_label": source_quality_label(region.source_quality, locale=locale),
                 "availability_flag": bool(region.availability_flag),
                 "unavailable_reason": _metric_reason(
                     region.observed_demand,
                     region.usual_demand,
                     region.demand_anomaly_pct,
+                    locale=locale,
                 ),
             }
         )
     return pd.DataFrame.from_records(records)
 
 
-def fallback_map_frame(regional: pd.DataFrame, *, freshness_label: str, source_label: str) -> pd.DataFrame:
+def fallback_map_frame(regional: pd.DataFrame, *, freshness_label: str, source_label: str, locale: str = "en") -> pd.DataFrame:
     if regional.empty:
         return pd.DataFrame()
     frame = regional.copy()
@@ -329,25 +368,25 @@ def fallback_map_frame(regional: pd.DataFrame, *, freshness_label: str, source_l
         frame.get("usual_demand_mw"),
         errors="coerce",
     )
-    frame["demand_label"] = frame["consumption_mw"].map(format_mw)
-    frame["usual_label"] = frame["usual_demand_mw"].map(format_mw)
-    frame["difference_label"] = frame["difference_mw"].map(format_signed_mw)
+    frame["demand_label"] = frame["consumption_mw"].map(lambda value: _format_mw_text(value, locale=locale))
+    frame["usual_label"] = frame["usual_demand_mw"].map(lambda value: _format_mw_text(value, locale=locale))
+    frame["difference_label"] = frame["difference_mw"].map(lambda value: _format_signed_mw_text(value, locale=locale))
     frame["freshness_label"] = freshness_label
     frame["source_label"] = source_label
     frame["availability_flag"] = frame["demand_anomaly_pct"].notna()
-    frame["unavailable_reason"] = "Regional demand anomaly is unavailable."
+    frame["unavailable_reason"] = t("now.states.regional_anomaly_unavailable", locale=locale)
     return frame
 
 
-def render_region_selector(selected_region: str) -> str:
+def render_region_selector(selected_region: str, *, locale: str = "en") -> str:
     codes = list(REGION_NAMES)
     index = codes.index(selected_region) if selected_region in codes else 0
     return st.selectbox(
-        "Selected region",
+        t("now.regions.selector_label", locale=locale),
         codes,
         index=index,
         format_func=lambda code: REGION_NAMES.get(code, code),
-        help="Select a region to update the regional contribution panel.",
+        help=t("now.regions.selector_help", locale=locale),
     )
 
 
@@ -357,6 +396,7 @@ def render_selected_region_panel(
     selected_region: str,
     *,
     hide_replay_badge: bool = False,
+    locale: str = "en",
 ) -> None:
     selected_row = _map_row(map_frame, selected_region)
     context = current_state.selected_region_context if current_state and current_state.region == selected_region else None
@@ -373,45 +413,41 @@ def render_selected_region_panel(
     net_flow = context.net_flow.value if context is not None else None
     physical_balance = context.physical_balance.value if context is not None else None
     flow_text = (
-        f"Physical balance {format_signed_mw(physical_balance)}"
+        t("now.regions.flow_balance", locale=locale, value=_format_signed_mw_text(physical_balance, locale=locale))
         if physical_balance is not None
-        else f"Net flow {format_signed_mw(net_flow)}"
+        else t("now.regions.flow_net", locale=locale, value=_format_signed_mw_text(net_flow, locale=locale))
     )
     provenance = _provenance_for_current_state(current_state, hide_replay=hide_replay_badge)
     metric_card(
-        "Regional demand",
-        format_mw(demand),
-        demand_difference_text(anomaly_pct, already_percent=True),
-        icon="Demand",
-        status=_status_for_anomaly_pct(anomaly_pct),
+        t("now.regions.demand_label", locale=locale),
+        _format_mw_text(demand, locale=locale),
+        demand_difference_text(anomaly_pct, already_percent=True, locale=locale),
+        icon=t("now.regions.demand_icon", locale=locale),
         provenance=provenance,
     )
     metric_card(
-        "Local generation",
-        format_mw(local_generation),
-        "Generation measured in the region, within the connected French grid.",
-        icon="Gen",
-        status="info",
+        t("now.regions.generation_label", locale=locale),
+        _format_mw_text(local_generation, locale=locale),
+        t("now.regions.generation_detail", locale=locale),
+        icon=t("now.regions.generation_icon", locale=locale),
         provenance=provenance,
     )
     metric_card(
-        "Physical flow context",
+        t("now.regions.flow_label", locale=locale),
         flow_text,
-        "Imports and exports are physical flow context when available.",
-        icon="Flow",
-        status="info",
+        t("now.regions.flow_detail", locale=locale),
+        icon=t("now.regions.flow_icon", locale=locale),
         provenance=provenance,
     )
     note = (
-        context.connected_grid_note
+        t("now.regions.connected_grid_note", locale=locale)
         if context is not None
-        else "Regional context is not an independent shortage warning; unavailable fields stay labelled unavailable."
+        else t("now.regions.note_unavailable", locale=locale)
     )
     explanation_card(
         region_name,
         note,
-        label="Selected-region context",
-        status="info",
+        label=t("now.regions.selected_label", locale=locale),
         provenance="modelled" if context is not None else "unavailable",
     )
 
@@ -423,38 +459,51 @@ def render_driver_cards(
     *,
     weather_override: dict[str, Any] | None = None,
     hide_replay_badge: bool = False,
+    locale: str = "en",
 ) -> None:
     demand = _current_demand(current_state, snapshot)
     usual = _metric_value(current_state.national_context.demand.usual if current_state is not None else None)
     anomaly = _current_anomaly_pct(current_state, snapshot)
     balance = _modelled_balance(current_state, selected_snapshot)
     official = _official_signal(current_state, selected_snapshot)
-    generation_detail = _generation_exchange_driver_detail(current_state, selected_snapshot)
+    generation_detail = _generation_exchange_driver_detail(current_state, selected_snapshot, locale=locale)
     weather = weather_override if weather_override is not None else snapshot.weather
     weather_is_live = bool(weather_override and weather_override.get("is_live"))
     columns = st.columns(4)
     with columns[0]:
         driver_card(
-            "Demand",
-            demand_difference_text(anomaly, already_percent=True),
-            f"France is using {format_gw(demand)}; usual for this context is {format_gw(usual)}.",
+            t("now.drivers.demand_icon", locale=locale),
+            demand_difference_text(anomaly, already_percent=True, locale=locale),
+            t(
+                "now.drivers.demand_detail",
+                locale=locale,
+                demand=_format_gw_text(demand, locale=locale),
+                usual=_format_gw_text(usual, locale=locale),
+            ),
+            label=t("now.drivers.demand_label", locale=locale),
             provenance=_provenance_for_current_state(current_state, hide_replay=hide_replay_badge),
         )
     with columns[1]:
         driver_card(
-            "Gen",
-            _balance_label(balance),
+            t("now.drivers.generation_icon", locale=locale),
+            _balance_label(balance, locale=locale),
             generation_detail,
-            label="Generation and exchange",
+            label=t("now.drivers.generation_label", locale=locale),
             provenance="modelled" if balance is not None else "unavailable",
         )
     with columns[2]:
-        weather_headline = str(weather.get("headline", "Weather unavailable"))
-        weather_detail = str(weather.get("detail", "Weather context is unavailable for this snapshot."))
+        weather_headline, weather_detail = _weather_summary_display(weather, locale=locale)
+        weather_live_base_detail = weather_detail
         if weather_is_live:
             location = weather.get("location") or "Paris"
             source = weather.get("source") or "Open-Meteo"
-            weather_detail = f"{weather_detail} Live reading · {location} · {source}."
+            weather_detail = t(
+                "now.weather.live_suffix",
+                locale=locale,
+                detail=weather_live_base_detail,
+                location=location,
+                source=source,
+            )
         if weather_is_live:
             weather_provenance: str | None = "observed"
         elif snapshot.mode == "REPLAY":
@@ -462,17 +511,17 @@ def render_driver_cards(
         else:
             weather_provenance = "observed"
         driver_card(
-            "Weather",
+            t("now.drivers.weather_icon", locale=locale),
             weather_headline,
             weather_detail,
             provenance=weather_provenance,
         )
     with columns[3]:
         driver_card(
-            "Eco",
-            _official_title(official),
-            _official_detail(official),
-            label="Official signal",
+            t("now.official.icon", locale=locale),
+            _official_title(official, locale=locale),
+            _official_detail(official, locale=locale),
+            label=t("now.official.label", locale=locale),
             provenance="official" if official is not None and _official_available(official) else "unavailable",
         )
 
@@ -482,37 +531,39 @@ def generation_mix_figure(
     *,
     demand_mw: float | None,
     net_imports_mw: float | None,
+    locale: str = "en",
 ) -> go.Figure:
-    items = generation_mix_items(mix)
-    labels = [item["label"] for item in items]
+    items = generation_mix_items(mix, locale=locale)
     values = [float(item["value_mw"]) for item in items]
     total = sum(values)
     max_x = max([total, float(demand_mw or 0), 1.0]) * 1.12
+    stack_label = t("now.generation_mix.stack_label", locale=locale)
     fig = go.Figure()
     for item in items:
         fig.add_bar(
             x=[item["value_mw"]],
-            y=["Generation"],
+            y=[stack_label],
             orientation="h",
             name=item["label"],
             marker_color=item["color"],
             text=[item["direct_label"]],
             textposition="inside" if item["share"] >= 0.08 else "none",
             insidetextanchor="middle",
-            hovertemplate=f"{html.escape(item['label'])}: %{{x:,.0f}} MW<extra></extra>",
+            customdata=[[item["value_label"]]],
+            hovertemplate=f"{html.escape(item['label'])}: %{{customdata[0]}}<extra></extra>",
         )
     if demand_mw is not None:
         fig.add_vline(
             x=float(demand_mw),
             line_color="#f8fafc",
             line_width=2,
-            annotation_text="Demand",
+            annotation_text=t("now.generation_mix.demand_marker", locale=locale),
             annotation_position="top",
         )
-    flow = flow_context_text(net_imports_mw)
+    flow = flow_context_text(net_imports_mw, locale=locale)
     fig.add_annotation(
         x=max_x,
-        y="Generation",
+        y=stack_label,
         text=flow,
         showarrow=False,
         xanchor="right",
@@ -534,21 +585,41 @@ def generation_mix_figure(
     return fig
 
 
-def generation_mix_items(mix: CurrentGenerationMix | None) -> list[dict[str, Any]]:
+def generation_mix_items(mix: CurrentGenerationMix | None, *, locale: str = "en") -> list[dict[str, Any]]:
     if mix is None:
-        return [{"label": "Unavailable", "value_mw": 0.0, "share": 1.0, "direct_label": "Unavailable", "color": "#64748b"}]
+        unavailable = _unavailable_text(locale)
+        return [
+            {
+                "label": unavailable,
+                "value_mw": 0.0,
+                "value_label": _format_mw_text(0.0, locale=locale),
+                "share": 1.0,
+                "direct_label": unavailable,
+                "color": "#64748b",
+            }
+        ]
     raw = [
         {
-            "label": technology_label(item.technology),
+            "label": technology_label(item.technology, locale=locale),
             "value_mw": float(item.power.value or 0.0),
             "share": float(item.share.value or 0.0) / 100.0,
-            "color": COLORS.get(technology_label(item.technology), "#94a3b8"),
+            "color": COLORS.get(technology_label(item.technology, locale="en"), "#94a3b8"),
         }
         for item in mix.technologies
         if item.power.value is not None and float(item.power.value) > 0
     ]
     if not raw:
-        return [{"label": "Unavailable", "value_mw": 0.0, "share": 1.0, "direct_label": "Unavailable", "color": "#64748b"}]
+        unavailable = _unavailable_text(locale)
+        return [
+            {
+                "label": unavailable,
+                "value_mw": 0.0,
+                "value_label": _format_mw_text(0.0, locale=locale),
+                "share": 1.0,
+                "direct_label": unavailable,
+                "color": "#64748b",
+            }
+        ]
     raw = sorted(raw, key=lambda item: item["value_mw"], reverse=True)
     keep: list[dict[str, Any]] = []
     other_value = 0.0
@@ -561,14 +632,15 @@ def generation_mix_items(mix: CurrentGenerationMix | None) -> list[dict[str, Any
     if other_value > 0:
         keep.append(
             {
-                "label": "Other",
+                "label": t("now.technology.other", locale=locale),
                 "value_mw": other_value,
                 "share": other_value / max(total, 1.0),
                 "color": "#94a3b8",
             }
         )
     for item in keep:
-        item["direct_label"] = f"{item['label']} {format_gw(item['value_mw'])}"
+        item["value_label"] = _format_mw_text(item["value_mw"], locale=locale)
+        item["direct_label"] = f"{item['label']} {_format_gw_text(item['value_mw'], locale=locale)}"
     return keep
 
 
@@ -577,6 +649,7 @@ def render_carbon_context(
     selected_snapshot: TwinSnapshot | None,
     *,
     hide_replay_badge: bool = False,
+    locale: str = "en",
 ) -> None:
     carbon = None
     provenance: str | None = "unavailable"
@@ -589,63 +662,56 @@ def render_carbon_context(
         carbon = current_state.national_context.carbon_estimate.estimate.value
         provenance = _provenance_for_current_state(current_state, hide_replay=hide_replay_badge)
     metric_card(
-        "Carbon context",
-        format_carbon(carbon),
-        "Displayed separately; not used in official EcoWatt or modelled balance status.",
+        t("now.carbon.label", locale=locale),
+        _format_carbon_text(carbon, locale=locale),
+        t("now.carbon.detail", locale=locale),
         icon="CO2",
-        status="info",
         provenance=provenance,
     )
 
 
-def demand_difference_text(value: float | None, *, already_percent: bool = True) -> str:
+def demand_difference_text(value: float | None, *, already_percent: bool = True, locale: str = "en") -> str:
     if value is None or pd.isna(value):
-        return "Demand versus usual unavailable"
+        return t("now.demand_difference.unavailable", locale=locale)
     percent = float(value) if already_percent else float(value) * 100
     if abs(percent) < 7:
-        return "Close to usual"
+        return t("now.demand_difference.close_to_usual", locale=locale)
+    percent_text = format_percentage(abs(percent), already_percent=True, locale=locale)
     if percent < 0:
-        return f"{abs(percent):.0f}% below usual"
-    return f"{percent:.0f}% above usual"
+        return t("now.demand_difference.below_usual", locale=locale, percent=percent_text)
+    return t("now.demand_difference.above_usual", locale=locale, percent=percent_text)
 
 
-def freshness_label_text(state: OperatingState | Freshness | None, age_seconds: float | None) -> str:
+def freshness_label_text(state: OperatingState | Freshness | None, age_seconds: float | None, locale: str = "en") -> str:
     if state is None:
-        return "Freshness unavailable"
-    state_text = str(getattr(state, "value", state)).replace("_", " ").title()
-    age = format_age_seconds(age_seconds)
-    return state_text if age == UNAVAILABLE else f"{state_text}, {age}"
+        return t("now.freshness.unavailable", locale=locale)
+    state_text = _freshness_state_text(state, locale=locale)
+    age = _localize_unavailable(format_age_seconds(age_seconds, locale=locale), locale)
+    return state_text if age == _unavailable_text(locale) else f"{state_text}, {age}"
 
 
-def source_quality_label(value: str | None) -> str:
+def source_quality_label(value: str | None, *, locale: str = "en") -> str:
     if not value:
-        return "Source unavailable"
-    return str(value).replace("_", " ").replace("-", " ").title()
+        return t("now.source_quality.unknown", locale=locale)
+    key = _keyify(value)
+    default = str(value).replace("_", " ").replace("-", " ").title()
+    return t(f"now.source_quality.{key}", locale=locale, default=default)
 
 
-def technology_label(value: str) -> str:
-    lookup = {
-        "nuclear": "Nuclear",
-        "wind": "Wind",
-        "solar": "Solar",
-        "hydro": "Hydro",
-        "gas": "Gas",
-        "coal": "Coal",
-        "oil": "Oil",
-        "bioenergy": "Bioenergy",
-    }
+def technology_label(value: str, *, locale: str = "en") -> str:
     key = str(value).strip().lower()
-    return lookup.get(key, key.replace("_", " ").title())
+    default = key.replace("_", " ").title()
+    return t(f"now.technology.{key}", locale=locale, default=default)
 
 
-def flow_context_text(net_imports_mw: float | None) -> str:
+def flow_context_text(net_imports_mw: float | None, *, locale: str = "en") -> str:
     if net_imports_mw is None:
-        return "Net exchange unavailable"
+        return t("now.flow.net_exchange_unavailable", locale=locale)
     if abs(float(net_imports_mw)) < 1:
-        return "Net exchange near zero"
+        return t("now.flow.net_exchange_near_zero", locale=locale)
     if net_imports_mw > 0:
-        return f"Net imports {format_gw(net_imports_mw, signed=True)}"
-    return f"Net exports {format_gw(abs(net_imports_mw), signed=False)}"
+        return t("now.flow.net_imports", locale=locale, value=_format_gw_text(net_imports_mw, signed=True, locale=locale))
+    return t("now.flow.net_exports", locale=locale, value=_format_gw_text(abs(net_imports_mw), locale=locale))
 
 
 def near_term_direction(
@@ -653,6 +719,7 @@ def near_term_direction(
     current_demand_mw: float | None,
     *,
     forecast_points: list[ForecastPointView] | None = None,
+    locale: str = "en",
 ) -> str:
     point_values = [point.p50 for point in (forecast_points or [])[:3]]
     if point_values:
@@ -665,42 +732,49 @@ def near_term_direction(
         ]
         values = [value for value in values if value is not None]
     if not values or current_demand_mw is None:
-        return "Near-term direction unavailable"
+        return t("now.near_term.unavailable", locale=locale)
     delta = values[-1] - float(current_demand_mw)
     threshold = max(abs(float(current_demand_mw)) * 0.01, 500.0)
     if delta > threshold:
-        return f"Rising over the next few hours ({format_gw(delta, signed=True)})"
+        return t("now.near_term.rising", locale=locale, delta=_format_gw_text(delta, signed=True, locale=locale))
     if delta < -threshold:
-        return f"Falling over the next few hours ({format_gw(delta, signed=True)})"
-    return "Broadly steady over the next few hours"
+        return t("now.near_term.falling", locale=locale, delta=_format_gw_text(delta, signed=True, locale=locale))
+    return t("now.near_term.steady", locale=locale)
 
 
 def main_driver_text(
     current_state: CurrentStateResponse | None,
     twin: TwinResponse | None,
     snapshot: GridSnapshotView,
+    *,
+    locale: str = "en",
 ) -> str:
     anomaly = _current_anomaly_pct(current_state, snapshot)
     if anomaly is not None and abs(float(anomaly)) >= 7:
-        return "The clearest driver is demand compared with usual."
+        return t("now.main_driver.demand", locale=locale)
     current_snapshot = twin.snapshots[0] if twin is not None and twin.snapshots else None
     if current_snapshot is not None and current_snapshot.modelled_balance_contributions:
         contribution = max(current_snapshot.modelled_balance_contributions, key=lambda item: item.contribution)
         if contribution.component == "announced_unavailability_ratio" and contribution.contribution > 0.08:
-            return "Announced generation unavailability is the main modelled driver."
+            return t("now.main_driver.unavailability", locale=locale)
         if contribution.component == "residual_load_percentile" and contribution.contribution > 0.55:
-            return "Demand left after wind and solar is the main modelled driver."
+            return t("now.main_driver.residual_load", locale=locale)
     headline = str(snapshot.weather.get("headline", ""))
     if headline and "unavailable" not in headline.lower():
-        return f"Weather context: {headline.lower()}."
-    return "No single driver is dominant from the available sources."
+        return t("now.main_driver.weather", locale=locale, headline=_weather_headline_display(headline, locale=locale).lower())
+    return t("now.main_driver.no_single_driver", locale=locale)
 
 
-def _snapshot_groups_by_local_day(snapshots: list[TwinSnapshot], timezone_name: str) -> list[tuple[str, list[TwinSnapshot]]]:
+def _snapshot_groups_by_local_day(
+    snapshots: list[TwinSnapshot],
+    timezone_name: str,
+    *,
+    locale: str = "en",
+) -> list[tuple[str, list[TwinSnapshot]]]:
     groups: list[tuple[str, list[TwinSnapshot]]] = []
     for item in snapshots:
         local = pd.Timestamp(item.event_time).tz_convert(timezone_name)
-        label = f"{local:%a %d %b}"
+        label = format_date(local, timezone_name=timezone_name, locale=locale, abbreviated=True)
         if groups and groups[-1][0] == label:
             groups[-1][1].append(item)
         else:
@@ -711,11 +785,13 @@ def _snapshot_groups_by_local_day(snapshots: list[TwinSnapshot], timezone_name: 
 def _forecast_groups_by_local_day(
     points: list[ForecastPointView],
     timezone_name: str,
+    *,
+    locale: str = "en",
 ) -> list[tuple[str, list[ForecastPointView]]]:
     groups: list[tuple[str, list[ForecastPointView]]] = []
     for point in points:
         local = point.timestamp.tz_convert(timezone_name)
-        label = f"{local:%a %d %b}"
+        label = format_date(local, timezone_name=timezone_name, locale=locale, abbreviated=True)
         if groups and groups[-1][0] == label:
             groups[-1][1].append(point)
         else:
@@ -745,21 +821,28 @@ def _modelled_balance(
     return None
 
 
-def _official_title(official: Any | None) -> str:
+def _official_title(official: Any | None, *, locale: str = "en") -> str:
     if official is None:
-        return "EcoWatt unavailable"
+        return t("now.official.title_unavailable", locale=locale)
     if hasattr(official, "available") and not bool(official.available):
-        return "EcoWatt unavailable"
+        return t("now.official.title_unavailable", locale=locale)
+    status = getattr(official, "status", None)
+    if status is not None:
+        return _status_display(status, locale=locale)
     label = getattr(official, "label", None)
-    return str(label or "EcoWatt unavailable")
+    return _signal_label_text(str(label), locale=locale) if label else t("now.official.title_unavailable", locale=locale)
 
 
-def _official_detail(official: Any | None) -> str:
+def _official_detail(official: Any | None, *, locale: str = "en") -> str:
     if official is None:
-        return "No official EcoWatt signal is available."
+        return t("now.official.detail_unavailable", locale=locale)
     if hasattr(official, "available") and not bool(official.available):
-        return str(getattr(official, "reason", None) or "No official EcoWatt signal is available.")
-    return str(getattr(official, "detail", None) or getattr(official, "reason", None) or "Official national signal.")
+        if locale == "en":
+            return str(getattr(official, "reason", None) or t("now.official.detail_unavailable", locale=locale))
+        return t("now.official.detail_unavailable", locale=locale)
+    if locale == "en":
+        return str(getattr(official, "detail", None) or getattr(official, "reason", None) or t("now.official.detail_available", locale=locale))
+    return t("now.official.detail_available", locale=locale)
 
 
 def _official_available(official: Any) -> bool:
@@ -769,56 +852,66 @@ def _official_available(official: Any) -> bool:
     return status not in {Status.UNKNOWN, "unknown", None}
 
 
-def _official_status(official: Any) -> str:
+def _official_status(official: Any, *, locale: str = "en") -> str:
     if not _official_available(official):
-        return "Unavailable"
+        return _unavailable_text(locale)
     status = getattr(official, "status", None)
     if status is None:
-        return _official_title(official)
-    return _status_display(status)
+        return _official_title(official, locale=locale)
+    return _status_display(status, locale=locale)
 
 
-def _balance_label(balance: Any | None) -> str:
+def _balance_label(balance: Any | None, *, locale: str = "en") -> str:
     if balance is None:
-        return "Unavailable"
-    return _status_display(getattr(balance, "status", getattr(balance, "label", "Unknown")))
+        return _unavailable_text(locale)
+    return _status_display(getattr(balance, "status", getattr(balance, "label", "Unknown")), locale=locale)
 
 
-def _status_display(value: Any) -> str:
+def _status_display(value: Any, *, locale: str = "en") -> str:
     if isinstance(value, Status):
-        return {
-            Status.NORMAL: "Normal",
-            Status.WATCH: "Watch",
-            Status.HIGH: "High",
-            Status.UNKNOWN: "Unknown",
-        }[value]
+        return t(f"now.status.{value.value}", locale=locale)
     text = str(value or "Unknown")
     lowered = text.lower()
-    return {
-        "normal": "Normal",
-        "watch": "Watch",
-        "high": "High",
-        "unknown": "Unknown",
-        "green": "Normal",
-        "orange": "Watch",
-        "red": "High",
-    }.get(lowered, text[:1].upper() + text[1:])
+    aliases = {
+        "normal": "normal",
+        "watch": "watch",
+        "high": "high",
+        "unknown": "unknown",
+        "green": "normal",
+        "orange": "watch",
+        "red": "high",
+        "no recommendation": "no_recommendation",
+    }
+    key = aliases.get(lowered)
+    return t(f"now.status.{key}", locale=locale) if key else text[:1].upper() + text[1:]
 
 
 def _generation_exchange_driver_detail(
     current_state: CurrentStateResponse | None,
     selected_snapshot: TwinSnapshot | None,
+    *,
+    locale: str = "en",
 ) -> str:
     balance = _modelled_balance(current_state, selected_snapshot)
     if balance is not None and hasattr(balance, "supply_margin"):
         margin = _quantified_value(balance.supply_margin)
         imports = _quantified_value(balance.net_imports)
-        return f"Generation and exchange context is {format_signed_mw(margin)} versus demand. {flow_context_text(imports)}."
+        return t(
+            "now.drivers.generation_detail.modelled",
+            locale=locale,
+            margin=_format_signed_mw_text(margin, locale=locale),
+            flow=flow_context_text(imports, locale=locale),
+        )
     if current_state is not None:
         imports = current_state.national_context.net_imports.value
         generation = current_state.national_context.generation_mix.total.value
-        return f"Observed generation is {format_gw(generation)}. {flow_context_text(imports)}."
-    return "Generation and exchange context is unavailable."
+        return t(
+            "now.drivers.generation_detail.current_state",
+            locale=locale,
+            generation=_format_gw_text(generation, locale=locale),
+            flow=flow_context_text(imports, locale=locale),
+        )
+    return t("now.drivers.generation_detail.unavailable", locale=locale)
 
 
 def _current_demand(current_state: CurrentStateResponse | None, snapshot: GridSnapshotView) -> float | None:
@@ -844,10 +937,130 @@ def _current_difference_gw(current_state: CurrentStateResponse | None, snapshot:
     return (float(current) - float(usual)) / 1000.0
 
 
-def _format_gw_delta(value_gw: float | None) -> str:
+def _format_gw_delta(value_gw: float | None, *, locale: str = "en") -> str:
     if value_gw is None:
-        return UNAVAILABLE
-    return f"{value_gw:+,.1f} GW"
+        return _unavailable_text(locale)
+    return _format_gw_text(value_gw * 1000.0, signed=True, locale=locale)
+
+
+def _format_mw_text(value: float | int | None, *, locale: str = "en") -> str:
+    return _localize_unavailable(format_mw(value, locale=locale), locale)
+
+
+def _format_signed_mw_text(value: float | int | None, *, locale: str = "en") -> str:
+    return _localize_unavailable(format_signed_mw(value, locale=locale), locale)
+
+
+def _format_gw_text(value: float | int | None, *, signed: bool = False, locale: str = "en") -> str:
+    return _localize_unavailable(format_gw(value, signed=signed, locale=locale), locale)
+
+
+def _format_carbon_text(value: float | int | None, *, locale: str = "en") -> str:
+    return _localize_unavailable(format_carbon(value, locale=locale), locale)
+
+
+def _unavailable_text(locale: str) -> str:
+    return t("shared.format.unavailable", locale=locale, default=UNAVAILABLE)
+
+
+def _localize_unavailable(value: str, locale: str) -> str:
+    return _unavailable_text(locale) if value == UNAVAILABLE else value
+
+
+def _freshness_state_text(state: OperatingState | Freshness, *, locale: str = "en") -> str:
+    key = _keyify(getattr(state, "value", state))
+    default = str(getattr(state, "value", state)).replace("_", " ").title()
+    return t(f"now.freshness.{key}", locale=locale, default=default)
+
+
+def _signal_label_text(value: str, *, locale: str = "en") -> str:
+    return _status_display(value, locale=locale)
+
+
+def _route_label(value: str | None, *, locale: str = "en") -> str:
+    if not value:
+        return _unavailable_text(locale)
+    key = _keyify(value)
+    return t(f"now.routes.{key}", locale=locale, default=str(value))
+
+
+def _weather_headline_for_values(temperature_c: float, wind_kmh: float, *, locale: str = "en") -> str:
+    if temperature_c <= 5:
+        return t("now.weather.cold_demand_lift", locale=locale)
+    if temperature_c >= 27:
+        return t("now.weather.heat_demand_lift", locale=locale)
+    if wind_kmh >= 35:
+        return t("now.weather.wind_output_context", locale=locale)
+    return t("now.weather.mild_weather", locale=locale)
+
+
+def _weather_detail_for_values(temperature_c: float, wind_kmh: float, cloud_pct: float, *, locale: str = "en") -> str:
+    return t(
+        "now.weather.detail",
+        locale=locale,
+        temperature=_localize_unavailable(format_temperature(temperature_c, locale=locale), locale),
+        wind=format_number(wind_kmh, locale=locale),
+        cloud=format_percentage(cloud_pct, already_percent=True, locale=locale),
+    )
+
+
+def _weather_summary_display(weather: dict[str, Any], *, locale: str = "en") -> tuple[str, str]:
+    temp = weather.get("temperature_c")
+    wind = weather.get("wind_kmh")
+    if temp is not None or wind is not None:
+        temp_value = 0.0 if temp is None else float(temp)
+        wind_value = 0.0 if wind is None else float(wind)
+        cloud_value = float(weather.get("cloud_pct") or 0.0)
+        return (
+            _weather_headline_for_values(temp_value, wind_value, locale=locale),
+            _weather_detail_for_values(temp_value, wind_value, cloud_value, locale=locale),
+        )
+    return (
+        _weather_headline_display(str(weather.get("headline", "")), locale=locale),
+        _weather_detail_display(str(weather.get("detail", "")), locale=locale),
+    )
+
+
+def _weather_headline_display(value: str, *, locale: str = "en") -> str:
+    key = _keyify(value)
+    if key in {"cold_demand_lift", "heat_demand_lift", "wind_output_context", "mild_weather"}:
+        return t(f"now.weather.{key}", locale=locale)
+    if not value or "unavailable" in value.lower():
+        return t("now.weather.unavailable_headline", locale=locale)
+    return value
+
+
+def _weather_detail_display(value: str, *, locale: str = "en") -> str:
+    if not value or "unavailable" in value.lower() or "omit weather" in value.lower():
+        return t("now.weather.unavailable_detail", locale=locale)
+    return value
+
+
+def _translate_unavailable_reason(value: str | None, *, locale: str = "en") -> str:
+    if not value:
+        return t("now.states.regional_value_unavailable", locale=locale)
+    text = str(value)
+    lowered = text.lower()
+    if "no regional demand record" in lowered:
+        return t("now.unavailable_reasons.no_regional_demand_record", locale=locale)
+    if lowered.startswith("no regional record is available for "):
+        region = text.rstrip(".").split(" for ", maxsplit=1)[-1]
+        return t("now.unavailable_reasons.no_regional_record", locale=locale, region=region)
+    if "usual-demand baseline is unavailable" in lowered:
+        return t("now.unavailable_reasons.usual_demand_geography", locale=locale)
+    if "demand anomaly is unavailable" in lowered:
+        return t("now.unavailable_reasons.demand_anomaly_missing", locale=locale)
+    if "difference versus usual is unavailable" in lowered:
+        return t("now.unavailable_reasons.difference_missing", locale=locale)
+    if "map demand anomaly unavailable" in lowered:
+        return t("now.unavailable_reasons.map_demand_anomaly", locale=locale)
+    if lowered == "value unavailable.":
+        return t("now.unavailable_reasons.value_unavailable", locale=locale)
+    return text if locale == "en" else t("now.states.regional_value_unavailable", locale=locale)
+
+
+def _keyify(value: Any) -> str:
+    return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
 
 
 def _metric_value(metric: NullableMetric | QuantifiedValue | None) -> float | None:
@@ -858,11 +1071,11 @@ def _quantified_value(value: QuantifiedValue | NullableMetric | None) -> float |
     return None if value is None else value.value
 
 
-def _metric_reason(*metrics: NullableMetric) -> str:
+def _metric_reason(*metrics: NullableMetric, locale: str = "en") -> str:
     for metric in metrics:
         if metric.reason:
-            return metric.reason
-    return "Regional value is unavailable."
+            return _translate_unavailable_reason(metric.reason, locale=locale)
+    return t("now.states.regional_value_unavailable", locale=locale)
 
 
 def _map_row(frame: pd.DataFrame, selected_region: str) -> pd.Series | None:

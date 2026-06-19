@@ -1,0 +1,368 @@
+{
+  "header": {
+    "subtitle": "Demand range, better usage windows, confidence, and future regional context for the next two days."
+  },
+  "time": {
+    "local_hour": "{weekday} {day} {month} {time}",
+    "window_same_day": "{weekday} {start_time}-{end_time}",
+    "window_cross_day": "{start_weekday} {start_time}-{end_weekday} {end_time}",
+    "weekdays_short": {
+      "0": "Mon",
+      "1": "Tue",
+      "2": "Wed",
+      "3": "Thu",
+      "4": "Fri",
+      "5": "Sat",
+      "6": "Sun"
+    },
+    "months_short": {
+      "1": "Jan",
+      "2": "Feb",
+      "3": "Mar",
+      "4": "Apr",
+      "5": "May",
+      "6": "Jun",
+      "7": "Jul",
+      "8": "Aug",
+      "9": "Sep",
+      "10": "Oct",
+      "11": "Nov",
+      "12": "Dec"
+    }
+  },
+  "errors": {
+    "context_title": "Forecast context unavailable",
+    "context_body": "The public dashboard could not load a typed or legacy forecast context.",
+    "forecast_title": "Forecast unavailable",
+    "forecast_body": "No forecast points are available for the next 48 hours.",
+    "regional_title": "Regional forecast unavailable",
+    "regional_body": "The selected future hour has no regional demand allocation."
+  },
+  "sections": {
+    "forecast": {
+      "kicker": "Forecast",
+      "title": "48-hour demand outlook",
+      "copy": "The selected timestamp from this chart is reused by the explanation, confidence, regional, generation, and balance panels."
+    },
+    "selected_hour": {
+      "kicker": "Selected Hour",
+      "title": "Why {hour} is high or low"
+    },
+    "confidence": {
+      "kicker": "Confidence",
+      "title": "What supports this forecast?"
+    },
+    "regional": {
+      "kicker": "Future Regional Map",
+      "title": "Regional demand anomaly at {hour}",
+      "copy": "This is a selected-hour forecast allocation. It is not current regional context and not a regional adequacy status."
+    },
+    "generation_balance": {
+      "kicker": "Generation And Balance",
+      "title": "Selected-hour context at {hour}"
+    }
+  },
+  "viz": {
+    "title": "Actuals, P50 forecast, likely range, and usual-demand baseline",
+    "detail": "The uncertainty ribbon is the p10-p90 likely range. It is not treated as a positive or negative pressure driver.",
+    "source": "RTE eco2mix, usual-demand baseline, and typed twin context"
+  },
+  "controls": {
+    "forecast_hour": "Forecast hour",
+    "previous_hour": "Previous hour",
+    "next_hour": "Next hour",
+    "selected_forecast_timestamp": "Selected forecast timestamp: {timestamp}",
+    "forecast_data": "Forecast data",
+    "best_window_objective": "Best-window objective",
+    "objective_caption": "These objectives may produce different times because demand balance context and carbon context are separate signals.",
+    "region_detail": "Region detail"
+  },
+  "objectives": {
+    "lowest_balance": "Lowest balance context",
+    "lowest_carbon": "Lowest carbon",
+    "combined": "Best combined window"
+  },
+  "summary": {
+    "peak": {
+      "label": "Expected peak",
+      "detail": "Range {range}. {delta}",
+      "unavailable_value": "Unavailable",
+      "unavailable_detail": "No peak could be calculated."
+    },
+    "best_window": {
+      "label": "Best usage window",
+      "detail": "{explanation} Average demand {demand}.",
+      "unavailable_value": "Unavailable",
+      "unavailable_detail": "No eligible forecast window is available."
+    },
+    "confidence": {
+      "label": "Confidence",
+      "detail": "Selected hour {hour}. {detail}"
+    }
+  },
+  "delta": {
+    "at_peak": "Selected hour is the expected peak.",
+    "after_peak": "Selected hour is {hours}h after the expected peak.",
+    "before_peak": "Selected hour is {hours}h before the expected peak."
+  },
+  "terms": {
+    "intro": "Terms: {usual} and {range}.",
+    "fallback_definition": "Domain term used by this dashboard.",
+    "usual_demand": {
+      "term": "usual demand",
+      "definition": "A comparable-history baseline for the same season, day type, and local hour."
+    },
+    "likely_range": {
+      "term": "likely range",
+      "definition": "The p10 to p90 forecast interval. It describes uncertainty and is not used as a balance-pressure input."
+    }
+  },
+  "selected_metrics": {
+    "usual_demand": {
+      "label": "Usual demand",
+      "detail": "Comparable-history baseline."
+    },
+    "positive_drivers": {
+      "label": "Positive drivers",
+      "detail": "Demand-side lift above usual for this selected hour."
+    },
+    "negative_drivers": {
+      "label": "Negative drivers",
+      "detail": "Demand-side easing below usual for this selected hour."
+    },
+    "final_expected_demand": {
+      "label": "Final expected demand",
+      "detail": "Range {range}; reconciliation error {error}."
+    }
+  },
+  "selected_explanation": {
+    "title": "Deterministic explanation",
+    "label": "Numerically reconciled",
+    "drivers": {
+      "lift_name": "Forecast lift versus usual",
+      "lift_detail": "The selected forecast sits above the comparable-hour usual-demand baseline.",
+      "easing_name": "Forecast easing versus usual",
+      "easing_detail": "The selected forecast sits below the comparable-hour usual-demand baseline."
+    },
+    "direction": {
+      "near": "near its usual level",
+      "above": "{delta} above usual",
+      "below": "{delta} below usual"
+    },
+    "text": "At {hour}, expected demand is {expected}, {direction}. The deterministic reconciliation is usual demand plus positive drivers minus negative drivers; uncertainty is shown only as the likely range."
+  },
+  "weather": {
+    "unavailable_headline": "Weather unavailable",
+    "unavailable_detail": "Weather context is unavailable for this snapshot.",
+    "headline": {
+      "cold": "Cold demand lift",
+      "heat": "Heat demand lift",
+      "wind": "Wind output context",
+      "mild": "Mild weather"
+    },
+    "detail": "{temperature}, wind {wind}, cloud {cloud}.",
+    "forecast_label": "Forecast at {hour}",
+    "forecast_detail": "{detail} Hourly forecast · {location} · {source}.",
+    "live_label": "Live weather (now)",
+    "live_detail": "{detail} Live reading · {location} · {source}.",
+    "bundled_label": "Bundled weather snapshot"
+  },
+  "confidence": {
+    "levels": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "detail": "{level} confidence based on horizon, interval width, route provenance, and recent error evidence.",
+    "factors": {
+      "horizon": {
+        "name": "Forecast horizon",
+        "value": "{hours}h",
+        "detail": "Longer horizons carry more uncertainty."
+      },
+      "interval_width": {
+        "name": "Interval width",
+        "value": "{width} ({ratio})",
+        "detail": "Width of the p10-p90 likely range relative to expected demand."
+      },
+      "weather_disagreement": {
+        "name": "Weather disagreement",
+        "value": "Unavailable",
+        "detail": "No multi-provider weather-disagreement artifact is attached to this route."
+      },
+      "fallback_sources": {
+        "name": "Fallback sources",
+        "fallback_value": "Fallback route",
+        "model_value": "Model or official route"
+      },
+      "recent_performance": {
+        "name": "Recent model performance",
+        "unavailable_value": "Unavailable",
+        "detail": "Most recent route-level error metric available to the page."
+      }
+    }
+  },
+  "regional": {
+    "unavailable_title": "Future regional context unavailable",
+    "unavailable_detail": "No selected-hour regional forecast was returned by the typed twin.",
+    "card_label": "Regional forecast",
+    "detail": "Forecast demand {forecast} versus usual {usual} ({difference}).",
+    "interpretation_title": "Regional interpretation",
+    "interpretation_label": "Demand allocation only",
+    "typed_freshness": "Forecast hour {hour}",
+    "typed_source": "Future regional demand forecast",
+    "typed_unavailable": "Future regional demand allocation unavailable.",
+    "typed_note": "Selected-hour regional demand allocation from the typed twin.",
+    "projected_source": "Projected future regional demand allocation",
+    "projected_unavailable": "Projected regional demand allocation unavailable.",
+    "projected_method": "Current regional demand shares projected onto the selected national forecast hour.",
+    "projected_note": "Projected regional demand is context only; it is not a current reading and not a regional adequacy status."
+  },
+  "generation": {
+    "mix": {
+      "label": "Estimated generation mix",
+      "model_detail": "Nuclear, wind, solar, and residual flexible sources/imports for the selected future hour.",
+      "fallback_detail": "Latest generation mix carried as an explicit fallback assumption for the selected future demand."
+    },
+    "availability": {
+      "label": "Availability context",
+      "model_detail": "Nuclear expected output {output}.",
+      "fallback_detail": "No selected-hour unavailability feed is aligned; latest availability is fallback context only."
+    },
+    "balance": {
+      "label": "Balance context",
+      "model_detail": "Score {score}; supply margin {margin}.",
+      "fallback_detail": "Static availability fallback; supply margin {margin}."
+    },
+    "official": {
+      "label": "Official signal",
+      "unavailable_value": "Future EcoWatt unavailable",
+      "unavailable_detail": "No aligned official signal is shown for this selected future hour."
+    },
+    "carbon": {
+      "label": "Carbon context",
+      "model_detail": "Selected-hour carbon intensity estimate for context; it is not a balance input.",
+      "fallback_detail": "Latest carbon intensity carried as fallback context; it is not a balance input."
+    },
+    "exchange": {
+      "label": "Exchange estimate",
+      "model_detail": "Positive means net imports; negative means net exports.",
+      "fallback_detail": "Latest exchange context carried as a fallback assumption."
+    }
+  },
+  "expanders": {
+    "estimated_generation_mix": "Estimated generation mix",
+    "how_calculated": {
+      "label": "How was this calculated?",
+      "paragraph_1": "The page uses the typed electricity-system twin only when its forecast origin aligns with the page's latest actual or demo timestamp. Otherwise it uses the aligned 48-hour forecast and labels projected regional, generation, balance, and carbon context as fallback.",
+      "paragraph_2": "Demand is shown as p50 with a p10-p90 likely range and a usual-demand baseline. The selected-hour explanation reconciles p50 as usual demand plus positive drivers minus negative drivers.",
+      "paragraph_3": "The best-window selector evaluates rolling three-hour windows. Balance, carbon, and combined objectives can choose different times because they optimize different quantities."
+    },
+    "reliability_model_card": {
+      "label": "Reliability and model card",
+      "limitations_label": "Known model limitations:"
+    },
+    "data_sources": {
+      "label": "Data sources and freshness",
+      "national": "National electricity: {source}",
+      "regional": "Regional electricity: {source}",
+      "map": "Map geometry: {source}",
+      "selected_hour": "Selected forecast hour: {timestamp}",
+      "unaligned_twin": "Typed twin snapshots were available but not aligned to this page's latest forecast origin, so selected-hour context is shown with explicit fallback labels.",
+      "snapshot_updated": "Selected twin snapshot updated: {timestamp}",
+      "optional_sources": "Unavailable optional sources:"
+    },
+    "about": {
+      "label": "About the project",
+      "paragraph_1": "This hackathon decision-support prototype is built for public electricity awareness. It combines RTE/ODRE electricity observations, EcoWatt context, weather features, and transparent fallbacks to explain demand, supply, and pressure separately.",
+      "paragraph_2": "Limitations: this is not an RTE operational forecast, tariff signal, dispatch tool, or verified carbon accounting method. Historical sample data is separated from live operational context."
+    },
+    "provenance": {
+      "label": "Data provenance"
+    }
+  },
+  "tables": {
+    "forecast": {
+      "time": "Time",
+      "p10": "P10",
+      "p50": "P50",
+      "p90": "P90",
+      "usual_demand": "Usual demand",
+      "balance_context": "Balance context",
+      "carbon": "Carbon",
+      "route": "Route",
+      "unknown": "Unknown",
+      "unavailable": "Unavailable"
+    },
+    "generation": {
+      "component": "Component",
+      "estimate": "Estimate",
+      "provenance": "Provenance",
+      "formula": "Formula",
+      "fallback_provenance": "latest snapshot fallback",
+      "fallback_formula": "Latest observed/replay mix carried as fallback context."
+    },
+    "reliability": {
+      "forecast_route": "Forecast route",
+      "hours": "Hours"
+    }
+  },
+  "best_window": {
+    "explanations": {
+      "lowest_balance": "Lowest average balance score over the window.",
+      "lowest_carbon": "Lowest average carbon-intensity context over the window.",
+      "combined": "Combined score balancing app balance context, carbon, and demand."
+    }
+  },
+  "chart": {
+    "actual_demand": "Actual demand",
+    "likely_range": "Likely range",
+    "usual_baseline": "Usual-demand baseline",
+    "forecast_demand": "Forecast demand",
+    "selected_hour": "Selected hour",
+    "now": "Now",
+    "p50": "P50",
+    "status": "Status",
+    "route": "Route",
+    "demand_hover": "{label}: {value}",
+    "axis_y": "MW"
+  },
+  "status": {
+    "normal": "Normal",
+    "watch": "Watch",
+    "high": "High",
+    "green": "Green",
+    "orange": "Orange",
+    "red": "Red",
+    "unknown": "Unknown",
+    "no_recommendation": "No recommendation"
+  },
+  "sources": {
+    "demand_forecast": "Demand forecast",
+    "usual_fallback": "Usual-demand baseline fallback",
+    "fallback_route": "Fallback route",
+    "unsupported_route": "Unsupported route"
+  },
+  "provenance_kinds": {
+    "latest_snapshot_fallback": "latest snapshot fallback",
+    "fallback": "fallback",
+    "modelled": "modelled",
+    "modelled_estimate": "modelled estimate",
+    "official": "official",
+    "observed": "observed"
+  },
+  "components": {
+    "nuclear_expected_output_or_availability": "Nuclear expected output",
+    "wind": "Wind",
+    "solar": "Solar",
+    "residual_flexible_sources_and_imports": "Residual flexible sources and imports"
+  },
+  "provenance_items": {
+    "national": "National electricity",
+    "regional": "Regional electricity",
+    "forecast_run": "Forecast run",
+    "selected_timestamp": "Selected timestamp",
+    "aligned_legacy_forecast": "Aligned legacy forecast",
+    "unavailable": "Unavailable"
+  }
+}

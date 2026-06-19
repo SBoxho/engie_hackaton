@@ -1,0 +1,363 @@
+{
+  "header": {
+    "subtitle": "Construisez une expérience visuelle et comparez la demande de référence, la réponse du système, les écarts régionaux et les limites."
+  },
+  "errors": {
+    "context_unavailable": {
+      "title": "Contexte de scénario indisponible",
+      "body": "Le tableau de bord public n’a pas pu charger de contexte de scénario typé ou historique."
+    },
+    "invalid_range": {
+      "title": "Plage de scénario invalide"
+    },
+    "api_error": {
+      "title": "Erreur de l’API de scénario",
+      "body": "Le calcul du scénario côté serveur n’a pas abouti : {error}"
+    }
+  },
+  "notices": {
+    "partial_horizon": {
+      "title": "Horizon de scénario partiel",
+      "body": "L’API de scénario a renvoyé {count} instantané(s) de référence, moins que la fenêtre complète de 48 heures plus l’origine."
+    },
+    "regional_unavailable": {
+      "title": "Écart régional de demande indisponible"
+    }
+  },
+  "loading": {
+    "title": "Exécution du scénario",
+    "body": "L’API de scénario calcule les écarts de référence et les plages de réponse.",
+    "spinner": "Estimation du scénario en cours..."
+  },
+  "sources": {
+    "scenario_api": "API de scénario",
+    "scenario_api_estimate": "Estimation de l’API de scénario"
+  },
+  "common": {
+    "yes": "oui",
+    "no": "non"
+  },
+  "scenarios": {
+    "cold_snap": {
+      "label": "Vague de froid",
+      "short": "Vague de froid",
+      "concept": "Demande",
+      "detail": "La demande thermosensible évolue pendant la fenêtre sélectionnée."
+    },
+    "generation_unavailability": {
+      "label": "Indisponibilité d’une unité de production",
+      "short": "Unité indisponible",
+      "concept": "Production",
+      "detail": "La production disponible est réduite pendant la fenêtre sélectionnée."
+    },
+    "ev_charging_shift": {
+      "label": "Décalage de la recharge des véhicules électriques",
+      "short": "Décalage VE",
+      "concept": "Temporalité de la demande",
+      "detail": "La recharge du soir est déplacée vers la fenêtre cible de nuit."
+    }
+  },
+  "builder": {
+    "kicker": "Créateur de scénario",
+    "title": "Changement -> Réponse du système -> Résultat",
+    "copy": "Un seul scénario actif est exécuté à la fois avec l’API de scénario typée sur 48 heures.",
+    "preset": "Scénario prédéfini",
+    "scope": {
+      "national": "National",
+      "regional": "Région sélectionnée"
+    },
+    "geographic_scope": "Périmètre géographique",
+    "region": "Région",
+    "magnitude": "Amplitude",
+    "cold_caption": "{value} plus froid",
+    "generation_caption": "{value} indisponible",
+    "asset_label": "Libellé de l’unité",
+    "participation": "Participation",
+    "ev_shifted_caption": "{value} véhicules électriques décalés",
+    "energy_per_ev": "Énergie par véhicule électrique (kWh)",
+    "participation_rate": "Taux de participation",
+    "source_window": "Fenêtre de recharge source",
+    "target_window": "Fenêtre de recharge cible",
+    "concept_affected": "Concept affecté",
+    "scenario_window": "Fenêtre du scénario",
+    "start_time": "Début : {value}",
+    "end_time": "Fin : {value}",
+    "duration": "Durée : {value} h"
+  },
+  "validation": {
+    "end_after_start": "L’heure de fin du scénario doit être postérieure à l’heure de début.",
+    "ev_windows_different": "Les fenêtres source et cible de recharge des véhicules électriques doivent être différentes.",
+    "ev_participation_positive": "La participation des véhicules électriques doit être supérieure à zéro.",
+    "magnitude_positive": "L’amplitude du scénario doit être supérieure à zéro."
+  },
+  "delta": {
+    "kicker": "Écart d’abord",
+    "title": "Ce qui change"
+  },
+  "metrics": {
+    "peak_demand_change": {
+      "label": "Évolution du pic de demande",
+      "detail": "Pic P50 du scénario comparé au pic P50 de la situation de référence."
+    },
+    "minimum_balance_change": {
+      "label": "Évolution minimale de l’équilibre",
+      "detail": "Évolution du score minimal de contexte d’équilibre modélisé."
+    },
+    "watch_high_hours": {
+      "label": "Heures de vigilance/forte tension",
+      "detail": "{count} heure(s) de transition de statut modifiée(s)."
+    },
+    "import_export_range": {
+      "label": "Plage import/export",
+      "detail": "Réponse nette import/export estimée sur l’horizon."
+    },
+    "carbon_range": {
+      "label": "Impact carbone",
+      "detail": "Plage carbone estimée du mix de réponse sur l’horizon."
+    }
+  },
+  "timeline": {
+    "kicker": "Chronologie",
+    "title": "Fenêtre d’événement sur 48 heures",
+    "note_title": "Bloc de scénario et contexte de demande de référence",
+    "note_detail": "{magnitude} de {window}."
+  },
+  "baseline": {
+    "kicker": "Situation de référence vs scénario",
+    "title": "P50, incertitude, zone d’écart et transitions de statut"
+  },
+  "selected_hour": {
+    "label": "Heure sélectionnée",
+    "option": "{time} - {status} - {delta}",
+    "previous": "Heure précédente",
+    "next": "Heure suivante",
+    "caption": "Heure du scénario sélectionnée : {label}"
+  },
+  "selected_metrics": {
+    "baseline_p50": {
+      "label": "P50 de référence"
+    },
+    "scenario_p50": {
+      "label": "P50 du scénario"
+    },
+    "demand_delta": {
+      "label": "Écart de demande",
+      "detail": "Mouvement de demande pour l’heure sélectionnée."
+    },
+    "residual_unresolved": {
+      "label": "Résiduel non résolu",
+      "detail": "Après la réponse estimée de la production flexible et des imports/exports."
+    }
+  },
+  "demand_delta": {
+    "note_title": "Écart horaire de demande",
+    "note_detail": "Les barres négatives réduisent la demande de cette heure ; les barres positives l’augmentent."
+  },
+  "generation": {
+    "kicker": "Réponse de production",
+    "title": "Production flexible, imports/exports et résiduel non résolu estimés",
+    "note_title": "Plages de réponse estimées",
+    "methods_expander": "Méthodes des plages de réponse"
+  },
+  "regional": {
+    "kicker": "Comparaison régionale",
+    "title": "Carte d’écart unique",
+    "no_allocation": {
+      "title": "Aucune allocation régionale d’écart de demande",
+      "label": "Comparaison régionale"
+    },
+    "no_changed_regions": "Aucune région ne présente d’écart de demande dans ce résultat de l’API de scénario.",
+    "delta_label": "{peak} au pic, {total}",
+    "delta_unavailable": "Écart régional de demande indisponible",
+    "no_delta": "Aucun écart de demande"
+  },
+  "assumptions": {
+    "expander": "Hypothèses et limites",
+    "sensitivity_heading": "Sensibilité du modèle, pas preuve causale.",
+    "sensitivity_body": "Il s’agit d’une estimation pédagogique de scénario, pas d’une prévision d’exploitation.",
+    "api_heading": "Hypothèses de l’API de scénario",
+    "limitations_heading": "Limites",
+    "versions_heading": "Versions des données et du modèle"
+  },
+  "versions": {
+    "result_id": "ID du résultat",
+    "baseline_run": "Exécution de référence",
+    "generated_at": "Généré le",
+    "model": "Modèle : {name}",
+    "data": "Donnée : {name}"
+  },
+  "provenance": {
+    "scenario_api_result": "Résultat de l’API de scénario",
+    "baseline_forecast_run": "Exécution de prévision de référence",
+    "scenario_preset": "Scénario prédéfini",
+    "regional_electricity": "Électricité régionale"
+  },
+  "magnitude": {
+    "cold_snap": "{value} plus froid",
+    "generation_unavailability": "{value} indisponible",
+    "generation_unavailability_asset": "{asset} : {value} indisponible",
+    "ev_charging_shift": "{vehicles} véhicules électriques, {energy} kWh chacun, {participation} de participation",
+    "generic": "Amplitude du scénario"
+  },
+  "window": {
+    "label": "{start} à {end} (fenêtre de {duration} h)"
+  },
+  "status": {
+    "unknown": "Inconnu",
+    "normal": "Normal",
+    "watch": "Vigilance",
+    "high": "Forte tension",
+    "low": "Faible"
+  },
+  "card_status": {
+    "watch": "Orange",
+    "green": "Normal",
+    "info": "Info"
+  },
+  "chain": {
+    "cold_snap": {
+      "1": {
+        "title": "Temps plus froid",
+        "detail": "L’entrée de température change"
+      },
+      "2": {
+        "title": "La demande de chauffage augmente",
+        "detail": "La P50 de demande est recalculée pour les heures actives"
+      },
+      "3": {
+        "title": "La charge résiduelle augmente",
+        "detail": "Davantage de demande demeure après l’offre sensible à la météo"
+      },
+      "4": {
+        "title": "Production flexible et imports réagissent",
+        "detail": "Les plages de réponse absorbent une partie du résiduel"
+      },
+      "5": {
+        "title": "L’équilibre se tend",
+        "detail": "Le statut d’équilibre de l’application peut évoluer"
+      }
+    },
+    "generation_unavailability": {
+      "1": {
+        "title": "Unité indisponible",
+        "detail": "La capacité est retirée de la disponibilité"
+      },
+      "2": {
+        "title": "La production disponible baisse",
+        "detail": "La demande est inchangée"
+      },
+      "3": {
+        "title": "La charge résiduelle augmente",
+        "detail": "La même demande dispose de moins d’offre disponible"
+      },
+      "4": {
+        "title": "Offre flexible et imports réagissent",
+        "detail": "Les plages de réponse absorbent une partie du résiduel"
+      },
+      "5": {
+        "title": "Le contexte d’équilibre change",
+        "detail": "Le statut d’équilibre de l’application peut évoluer"
+      }
+    },
+    "ev_charging_shift": {
+      "1": {
+        "title": "La recharge est décalée",
+        "detail": "La même énergie change de fenêtre"
+      },
+      "2": {
+        "title": "La demande du soir baisse",
+        "detail": "L’écart de demande de la fenêtre source est négatif"
+      },
+      "3": {
+        "title": "La demande de nuit augmente",
+        "detail": "L’écart de demande de la fenêtre cible est positif"
+      },
+      "4": {
+        "title": "Le pic peut se déplacer",
+        "detail": "Les heures de rebond sont signalées par l’API de scénario"
+      },
+      "5": {
+        "title": "La plage carbone change",
+        "detail": "Les émissions du mix de réponse sont estimées sous forme de plage"
+      }
+    }
+  },
+  "charts": {
+    "event_timeline": {
+      "baseline_context": "Contexte de demande de référence",
+      "baseline_hover": "Référence : %{y:,.0f} MW<extra></extra>",
+      "handles": "Repères de début et de fin"
+    },
+    "baseline_scenario": {
+      "baseline_p90": "Référence p90",
+      "baseline_uncertainty": "Incertitude de référence",
+      "uncertainty_hover": "P10-P90 : %{y:,.0f} MW<extra></extra>",
+      "baseline_p50": "Référence P50",
+      "baseline_p50_hover": "Référence P50 : %{y:,.0f} MW<extra></extra>",
+      "delta_upper": "Borne haute de l’écart du scénario",
+      "delta_area": "Zone d’écart",
+      "scenario_p50": "Scénario P50",
+      "scenario_hover": "<b>%{x|%a %d %b %H:%M}</b><br>Scénario P50 : %{y:,.0f} MW<br>Statut : %{customdata[1]}<br>Écart de demande : %{customdata[2]:+,.0f} MW<br>Réponse import/export : %{customdata[3]:+,.0f} MW<extra></extra>",
+      "selected_hour": "Heure sélectionnée",
+      "yaxis": "Demande MW"
+    },
+    "demand_delta": {
+      "name": "Écart de demande",
+      "hover": "Écart de demande : %{y:+,.0f} MW<extra></extra>"
+    },
+    "generation_response": {
+      "flexible_generation": "Production flexible",
+      "imports_exports": "Imports / exports",
+      "unresolved_residual": "Résiduel non résolu",
+      "hover": "{label} : {low} à {high} MWh<extra></extra>",
+      "xaxis": "Écart MWh estimé"
+    },
+    "regional_delta": {
+      "colorbar": "Écart au pic",
+      "changed_hover": "<b>%{customdata[0]}</b><br>Écart au pic : %{customdata[1]:+,.0f} MW<br>Écart total : %{customdata[2]:+,.0f} MWh<br>Modifié : %{customdata[3]}<extra></extra>",
+      "changed_name": "Écart régional de demande modifié",
+      "unchanged_name": "Écart régional de demande inchangé",
+      "unavailable_hover": "<b>%{customdata[0]}</b><br>Écart de demande : indisponible<br>Raison : %{customdata[1]}<extra></extra>",
+      "unavailable_name": "Écart régional de demande indisponible"
+    }
+  },
+  "tables": {
+    "changed_regions": {
+      "region": "Région",
+      "peak_demand_delta": "Écart au pic de demande",
+      "total_energy_delta": "Écart d’énergie total"
+    }
+  },
+  "formats": {
+    "watch_high_delta": "{value} h vigilance/forte tension",
+    "score_delta": "{value} score",
+    "range": "{low} à {high}"
+  },
+  "api_text": {
+    "generation_unavailability_regional_reason": "L’indisponibilité d’une unité de production est représentée en v1 uniquement comme disponibilité nationale de l’offre.",
+    "regional_delta_method": "Les écarts régionaux de demande sont alloués à partir des parts régionales de demande réconciliées ; ce n’est pas une adéquation régionale.",
+    "regional_delta_unavailable": "Les données régionales d’écart de demande du scénario sont indisponibles.",
+    "national_supply_only": "Ce scénario modifie uniquement le contexte national d’offre.",
+    "no_regional_allocation": "Ce type de scénario n’a pas d’allocation régionale de demande en v1.",
+    "scenario_response_estimate": "Estimation de réponse du scénario.",
+    "import_export_method": "Après la réponse de la production flexible, une fraction configurée du résiduel restant est représentée par plus d’imports nets, moins d’exports, moins d’imports nets ou plus d’exports.",
+    "generation_response_method": "La production flexible absorbe une part configurée du changement résiduel ; l’éolien et le solaire suivent les prévisions de référence.",
+    "carbon_method": "Chaque MWh résiduel positif est multiplié par une plage plausible d’intensité du mix de réponse ; chaque MWh résiduel négatif est traité comme une production du mix de réponse évitée.",
+    "caveat_directional": "Il s’agit d’un scénario directionnel d’aide à la décision publique, pas d’une prévision de dispatching.",
+    "caveat_ranges": "Les imports, exports, la production flexible et le résiduel non résolu sont représentés sous forme de plages pour éviter une fausse précision.",
+    "caveat_import_requirement": "Le moteur ne rend pas automatiquement le besoin d’import égal à l’évolution du pic de demande.",
+    "caveat_carbon": "Le carbone est une plage plausible du mix de réponse, pas une comptabilité d’émissions vérifiée.",
+    "assumption_wind_solar": "L’éolien et le solaire suivent leurs prévisions ajustées de référence.",
+    "assumption_nuclear": "Le nucléaire suit le contexte de disponibilité ; l’indisponibilité d’une unité de production réduit l’offre disponible, pas la demande.",
+    "assumption_cold_snap": "Le recalcul de demande de vague de froid utilise heating_sensitivity_mw_per_c et des multiplicateurs déterministes d’heure locale.",
+    "assumption_ev_shift": "Le décalage de recharge des véhicules électriques conserve l’énergie totale modélisée du scénario sur les fenêtres source et cible complètes.",
+    "assumption_artifact": "Artefact d’hypothèses de scénario : {version}.",
+    "assumption_generation_fraction": "Plage de fraction de réponse de la production flexible : {fraction} du changement résiduel.",
+    "assumption_import_fraction": "Plage de fraction de réponse import/export après réponse flexible : {fraction}.",
+    "request_assumptions": "Hypothèses de requête : interface {interface} ; estimation {estimate} ; scénario actif unique : {single_active}.",
+    "request_assumptions_raw": "Hypothèses de requête : {payload}",
+    "estimate_educational_directional": "scénario pédagogique directionnel",
+    "single_active_yes": "oui",
+    "single_active_no": "non"
+  }
+}

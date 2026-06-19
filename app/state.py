@@ -7,13 +7,14 @@ from typing import Any, Mapping, MutableMapping
 import pandas as pd
 import streamlit as st
 
+from app.i18n import DEFAULT_LOCALE, LOCALE_QUERY_KEY, LOCALE_SESSION_KEY, normalize_locale
 from src.api.current_state import normalize_region_code
 from src.contracts.energy_twin import DomainMode
 
 
 DEFAULT_REGION = "11"
 DEFAULT_SCENARIO = "cold_snap"
-APP_QUERY_KEYS = ("mode", "region", "t", "run", "scenario")
+APP_QUERY_KEYS = ("mode", "region", "t", "run", "scenario", LOCALE_QUERY_KEY)
 
 
 @dataclass(frozen=True)
@@ -23,6 +24,7 @@ class AppState:
     selected_timestamp: datetime | None = None
     selected_forecast_run: str | None = None
     selected_scenario: str | None = DEFAULT_SCENARIO
+    locale: str = DEFAULT_LOCALE
 
 
 def restore_state(
@@ -57,12 +59,18 @@ def restore_state(
         or session_state.get("selected_scenario")
         or DEFAULT_SCENARIO
     )
+    locale = normalize_locale(
+        _first(query_params, LOCALE_QUERY_KEY)
+        or session_state.get(LOCALE_SESSION_KEY)
+        or DEFAULT_LOCALE
+    )
     return AppState(
         mode=mode,
         selected_region=region,
         selected_timestamp=timestamp,
         selected_forecast_run=forecast_run,
         selected_scenario=scenario,
+        locale=locale,
     )
 
 
@@ -80,6 +88,7 @@ def persist_app_state(state: AppState) -> None:
     st.session_state["selected_timestamp"] = state.selected_timestamp
     st.session_state["selected_forecast_run"] = state.selected_forecast_run
     st.session_state["selected_scenario"] = state.selected_scenario
+    st.session_state[LOCALE_SESSION_KEY] = state.locale
     sync_query_params(state, st.query_params)
 
 
@@ -98,6 +107,7 @@ def state_to_query_params(state: AppState) -> dict[str, str]:
     result = {
         "mode": state.mode.value,
         "region": state.selected_region,
+        LOCALE_QUERY_KEY: state.locale,
     }
     if state.selected_timestamp is not None:
         result["t"] = _utc_iso(state.selected_timestamp)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+import json
 from pathlib import Path
 from typing import Any
 
@@ -14,11 +15,15 @@ from app.what_if_view import (
     causal_chain_steps,
     changed_region_table,
     demand_delta_chart,
+    generation_response_chart,
+    magnitude_label_from_request,
     regional_delta_choropleth,
     regional_delta_frame,
     restore_scenario_controls,
     scenario_frames,
+    scenario_preset_label,
     scenario_summary,
+    translate_api_text,
 )
 from src.api.scenarios import ScenarioService
 from src.data_sources.rte_eco2mix_regional import fallback_region_geojson
@@ -26,6 +31,22 @@ from tests.test_twin_api import NOW, service as twin_fixture_service
 
 
 APP_MAIN = Path(__file__).resolve().parents[1] / "app" / "main.py"
+LOCALES = Path(__file__).resolve().parents[1] / "app" / "locales"
+
+
+def flattened_locale_keys(locale: str, namespace: str) -> set[str]:
+    def flatten(data: dict[str, Any], prefix: str = "") -> set[str]:
+        keys: set[str] = set()
+        for key, value in data.items():
+            path = f"{prefix}.{key}" if prefix else str(key)
+            if isinstance(value, dict):
+                keys.update(flatten(value, path))
+            else:
+                keys.add(path)
+        return keys
+
+    data = json.loads((LOCALES / locale / f"{namespace}.json").read_text(encoding="utf-8"))
+    return flatten(data)
 
 
 def scenario_service() -> ScenarioService:
@@ -86,6 +107,29 @@ def ev_request(**updates: Any) -> dict[str, Any]:
     }
     request.update(updates)
     return request
+
+
+def test_what_if_translation_files_have_matching_keys() -> None:
+    assert flattened_locale_keys("en", "what_if") == flattened_locale_keys("fr-FR", "what_if")
+
+
+def test_what_if_view_helpers_render_french_labels() -> None:
+    result = scenario_service().run(cold_request(), use_cache=False)
+
+    assert scenario_preset_label("cold_snap", locale="fr-FR") == "Vague de froid"
+    assert "plus froid" in magnitude_label_from_request(result, locale="fr-FR")
+    assert "La demande de chauffage augmente" in " ".join(title for title, _ in causal_chain_steps(result, locale="fr-FR"))
+    assert "scénario pédagogique directionnel" in translate_api_text(
+        'Request assumptions: {"estimate": "educational directional scenario", "interface": "what-if-builder.v1", "single_active_scenario": true}',
+        locale="fr-FR",
+    )
+
+    baseline_figure = baseline_scenario_chart(result, selected_timestamp="2026-06-18T15:00:00Z", locale="fr-FR")
+    assert "Référence P50" in {trace.name for trace in baseline_figure.data}
+
+    response_figure = generation_response_chart(result, locale="fr-FR")
+    assert "Production flexible" == response_figure.data[0].name
+    assert " à " in response_figure.data[0].hovertemplate
 
 
 @pytest.mark.parametrize(
@@ -171,6 +215,11 @@ def test_regional_delta_map_uses_geo_choropleth_and_peak_delta_z_values() -> Non
     assert changed.customdata[0][3] is True
     assert "84" in list(unchanged.locations)
 
+    french_figure = regional_delta_choropleth(frame, fallback_region_geojson(), locale="fr-FR")
+    french_changed = next(trace for trace in french_figure.data if trace.name == "Écart régional de demande modifié")
+    assert french_changed.colorbar.title.text == "Écart au pic"
+    assert french_changed.customdata[0][3] == "oui"
+
 
 def test_unsupported_regional_delta_map_labels_regions_unavailable() -> None:
     result = scenario_service().run(outage_request(), use_cache=False)
@@ -218,8 +267,8 @@ def test_url_restoration_builds_scenario_api_request_window() -> None:
 @pytest.mark.parametrize(
     ("scenario", "expected_label"),
     [
-        ("cold_snap", "Colder weather"),
-        ("generation_unavailability", "Generation unavailable"),
+        ("cold_snap", "Cold snap"),
+        ("generation_unavailability", "Generating unit unavailable"),
         ("ev_charging_shift", "EV charging shift"),
     ],
 )
@@ -231,7 +280,7 @@ def test_what_if_page_runs_each_scenario_type(
     monkeypatch.setenv("APP_MODE", "demo")
     monkeypatch.setenv("DEMO_ALLOW_EXTERNAL_API", "0")
     app = AppTest.from_file(APP_MAIN, default_timeout=25)
-    app.query_params.update({"scenario": [scenario], "start": ["16"], "duration": ["8"], "mag": ["3"]})
+    app.query_params.update({"lang": ["en"], "scenario": [scenario], "start": ["16"], "duration": ["8"], "mag": ["3"]})
     if scenario == "generation_unavailability":
         app.query_params["mag"] = ["1.3"]
     if scenario == "ev_charging_shift":
@@ -247,10 +296,28 @@ def test_what_if_page_runs_each_scenario_type(
     assert "Scenario API" in rendered
 
 
+def test_what_if_page_defaults_to_french(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_MODE", "demo")
+    monkeypatch.setenv("DEMO_ALLOW_EXTERNAL_API", "0")
+    app = AppTest.from_file(APP_MAIN, default_timeout=25)
+    app.switch_page("pages/what_if.py")
+    app.run(timeout=75)
+
+    rendered = "\n".join(str(item.value) for item in app.markdown)
+
+    assert not app.exception
+    assert app.selectbox[0].value == "Vague de froid"
+    assert "Évolution du pic de demande" in rendered
+    assert "API de scénario" in rendered
+    assert "Delta First" not in rendered
+    assert "Scenario Builder" not in rendered
+
+
 def test_what_if_timeline_editing_updates_url_and_delta_view(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_MODE", "demo")
     monkeypatch.setenv("DEMO_ALLOW_EXTERNAL_API", "0")
     app = AppTest.from_file(APP_MAIN, default_timeout=25)
+    app.query_params.update({"lang": ["en"]})
     app.switch_page("pages/what_if.py")
     app.run(timeout=75)
 

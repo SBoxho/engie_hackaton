@@ -1,0 +1,163 @@
+{
+  "app": {
+    "name": "Energy Pulse France"
+  },
+  "format": {
+    "unavailable": "Unavailable"
+  },
+  "about": {
+    "body_1": "This hackathon decision-support prototype is built for public electricity awareness. It combines RTE/ODRE electricity observations, EcoWatt context, weather features, and transparent fallbacks to explain demand, generation, exchange, and pressure separately.",
+    "body_2": "Limitations: this is not an RTE operational forecast, tariff signal, dispatch tool, or verified carbon accounting method. Historical sample data is separated from live operational context.",
+    "title": "About the project"
+  },
+  "aria": {
+    "provenance": "Provenance",
+    "status": "Status"
+  },
+  "context": {
+    "aria_label": "Application context",
+    "current_weather": "Current weather",
+    "last_update": "Last update",
+    "live_weather_source": "Live · {location} · {source}",
+    "scope": "Scope",
+    "selected_sublabel": "selected {timestamp}",
+    "selected_time": "Selected time",
+    "wind": "wind {value} km/h"
+  },
+  "footer": {
+    "built_for": "Built for the hackathon"
+  },
+  "header": {
+    "language_region": "Display language"
+  },
+  "language": {
+    "label": "Language",
+    "options": {
+      "en": "EN",
+      "fr": "FR"
+    }
+  },
+  "mode": {
+    "forecast": "Forecast",
+    "live": "Live",
+    "replay": "Demo context",
+    "simulation": "Simulation"
+  },
+  "notices": {
+    "delayed_source_data": {
+      "body": "The current-state API marks the latest source record as delayed.",
+      "title": "Delayed source data"
+    },
+    "demo_fixture_mode": {
+      "body": "This is contract-valid historical sample data and must not be read as live operations.",
+      "title": "Demo fixture mode"
+    },
+    "optional_source_unavailable": {
+      "body": "{count} optional source field(s) are unavailable.",
+      "title": "Optional source unavailable"
+    },
+    "partial_data": {
+      "body": "{count} field(s) are unavailable and labelled in the typed contract.",
+      "title": "Partial data"
+    },
+    "stale_data": {
+      "body": "The latest typed contract marks this data as stale.",
+      "title": "Stale data"
+    },
+    "typed_twin_contract_unavailable": {
+      "body": "The page is using the legacy public context while the typed response is unavailable.",
+      "title": "Typed twin contract unavailable"
+    },
+    "using_last_known_good_data": {
+      "body": "Live refresh did not provide a fresh complete source bundle.",
+      "title": "Using last-known-good data"
+    }
+  },
+  "nav": {
+    "next_48h": "Next 48H",
+    "now": "Now",
+    "technical_lab": "Technical lab",
+    "what_if": "What If?"
+  },
+  "provenance": {
+    "definition": {
+      "fallback": "Fallback route used because preferred data was unavailable.",
+      "model": "Model estimate from the Energy Pulse analytical layer.",
+      "modelled": "App balance context from the analytical layer.",
+      "observed": "Observed public measurement.",
+      "official": "Official public source or official forecast.",
+      "replay": "Historical replay or demo fixture, not live data.",
+      "scenario": "Scenario output from user-selected assumptions.",
+      "unavailable": "The source or field is unavailable and has not been replaced with zero."
+    },
+    "label": {
+      "fallback": "Fallback",
+      "model": "Model estimate",
+      "modelled": "Balance context",
+      "observed": "Observed",
+      "official": "Official",
+      "replay": "Replay",
+      "scenario": "Scenario",
+      "unavailable": "Unavailable"
+    }
+  },
+  "provenance_drawer": {
+    "title": "Data provenance"
+  },
+  "sources": {
+    "visible": "Visible sources"
+  },
+  "state_kind": {
+    "empty": "Empty",
+    "error": "Error",
+    "fallback": "Fallback",
+    "loading": "Loading",
+    "partial": "Partial data",
+    "stale": "Stale data"
+  },
+  "states": {
+    "loading": {
+      "body": "Retrieving the latest typed contract response.",
+      "title": "Loading data"
+    }
+  },
+  "status": {
+    "blue": "Info",
+    "fallback": "Fallback",
+    "good": "Good",
+    "green": "Normal",
+    "grey": "Unknown",
+    "high": "High",
+    "info": "Info",
+    "low": "Low",
+    "medium": "Medium",
+    "normal": "Normal",
+    "orange": "Watch",
+    "red": "High",
+    "unknown": "Unknown",
+    "unavailable": "Unavailable",
+    "watch": "Watch",
+    "yellow": "Watch"
+  },
+  "terms": {
+    "default": {
+      "definition": "Domain term used by this dashboard."
+    },
+    "likely_range": {
+      "definition": "The p10 to p90 forecast interval. It describes uncertainty and is not used as a balance-pressure input.",
+      "label": "likely range"
+    },
+    "local_generation": {
+      "definition": "Electricity generated in the selected region; the region remains part of the connected French grid.",
+      "label": "local generation"
+    },
+    "modelled_balance_context": {
+      "definition": "A documented analytical pressure context, separate from official EcoWatt and not an operational reserve margin.",
+      "label": "modelled balance context"
+    },
+    "usual_demand": {
+      "definition": "A comparable-history baseline for the same season, day type, and local hour.",
+      "label": "usual demand"
+    }
+  }
+}

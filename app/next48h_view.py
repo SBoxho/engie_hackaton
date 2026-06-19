@@ -6,7 +6,8 @@ from typing import Any, Iterable
 
 import pandas as pd
 
-from app.formatting import format_mw, format_signed_mw, format_timestamp
+from app.formatting import format_carbon, format_gw, format_mw, format_percentage, format_signed_mw, format_timestamp
+from app.i18n import t
 from app.view_models import ForecastPointView, demand_anomaly_label, pressure_score
 from src.contracts.energy_twin import TwinResponse, TwinSnapshot
 from src.contracts.status_thresholds import status_label
@@ -17,6 +18,66 @@ BEST_WINDOW_OBJECTIVES = {
     "lowest_carbon": "Lowest carbon",
     "combined": "Best combined window",
 }
+
+
+def best_window_objective_label(objective: str, *, locale: str = "en") -> str:
+    key = objective if objective in BEST_WINDOW_OBJECTIVES else "combined"
+    return t(f"next48h.objectives.{key}", locale=locale, default=BEST_WINDOW_OBJECTIVES[key])
+
+
+def local_hour_label(
+    timestamp: datetime | pd.Timestamp,
+    *,
+    timezone_name: str = "Europe/Paris",
+    locale: str = "en",
+) -> str:
+    local = _as_utc(timestamp).tz_convert(timezone_name)
+    return t(
+        "next48h.time.local_hour",
+        locale=locale,
+        weekday=t(f"next48h.time.weekdays_short.{local.weekday()}", locale=locale, default=f"{local:%a}"),
+        day=f"{local.day:02d}",
+        month=t(f"next48h.time.months_short.{local.month}", locale=locale, default=f"{local:%b}"),
+        time=f"{local:%H:%M}",
+    )
+
+
+def window_label(
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+    *,
+    timezone_name: str = "Europe/Paris",
+    locale: str = "en",
+) -> str:
+    start_local = _as_utc(start).tz_convert(timezone_name)
+    end_local = _as_utc(end).tz_convert(timezone_name)
+    start_weekday = t(f"next48h.time.weekdays_short.{start_local.weekday()}", locale=locale, default=f"{start_local:%a}")
+    end_weekday = t(f"next48h.time.weekdays_short.{end_local.weekday()}", locale=locale, default=f"{end_local:%a}")
+    if start_local.date() == end_local.date():
+        return t(
+            "next48h.time.window_same_day",
+            locale=locale,
+            weekday=start_weekday,
+            start_time=f"{start_local:%H:%M}",
+            end_time=f"{end_local:%H:%M}",
+        )
+    return t(
+        "next48h.time.window_cross_day",
+        locale=locale,
+        start_weekday=start_weekday,
+        start_time=f"{start_local:%H:%M}",
+        end_weekday=end_weekday,
+        end_time=f"{end_local:%H:%M}",
+    )
+
+
+def time_delta_text(selected: pd.Timestamp, reference: pd.Timestamp, *, locale: str = "en") -> str:
+    hours = int(round((selected - reference).total_seconds() / 3600.0))
+    if hours == 0:
+        return t("next48h.delta.at_peak", locale=locale)
+    if hours > 0:
+        return t("next48h.delta.after_peak", locale=locale, hours=hours)
+    return t("next48h.delta.before_peak", locale=locale, hours=abs(hours))
 
 
 @dataclass(frozen=True)
@@ -263,6 +324,7 @@ def choose_best_window(
     objective: str,
     *,
     window_hours: int = 3,
+    locale: str = "en",
 ) -> BestWindow | None:
     if forecast.empty or "timestamp" not in forecast:
         return None
@@ -284,13 +346,13 @@ def choose_best_window(
     demand_norm = _normalised(frame["demand_for_window"])
     if objective == "lowest_balance":
         frame["objective_score"] = frame["balance_score_for_window"]
-        explanation = "Lowest average balance score over the window."
+        explanation = t("next48h.best_window.explanations.lowest_balance", locale=locale)
     elif objective == "lowest_carbon":
         frame["objective_score"] = frame["carbon_for_window"]
-        explanation = "Lowest average carbon-intensity context over the window."
+        explanation = t("next48h.best_window.explanations.lowest_carbon", locale=locale)
     else:
         frame["objective_score"] = 0.5 * balance_norm + 0.3 * carbon_norm + 0.2 * demand_norm
-        explanation = "Combined score balancing app balance context, carbon, and demand."
+        explanation = t("next48h.best_window.explanations.combined", locale=locale)
 
     window = max(1, min(int(window_hours), len(frame)))
     candidates: list[tuple[float, int, pd.DataFrame]] = []
@@ -317,6 +379,7 @@ def selected_hour_explanation(
     snapshot: TwinSnapshot | None = None,
     *,
     timezone_name: str = "Europe/Paris",
+    locale: str = "en",
 ) -> SelectedHourExplanation:
     p10, expected, p90 = _demand_interval_values(point, snapshot)
     usual = _usual_value(point, snapshot, default=expected)
@@ -326,32 +389,41 @@ def selected_hour_explanation(
     if correction >= 50:
         positive.append(
             DemandDriver(
-                "Forecast lift versus usual",
+                t("next48h.selected_explanation.drivers.lift_name", locale=locale),
                 correction,
-                "The selected forecast sits above the comparable-hour usual-demand baseline.",
+                t("next48h.selected_explanation.drivers.lift_detail", locale=locale),
             )
         )
     elif correction <= -50:
         negative.append(
             DemandDriver(
-                "Forecast easing versus usual",
+                t("next48h.selected_explanation.drivers.easing_name", locale=locale),
                 abs(correction),
-                "The selected forecast sits below the comparable-hour usual-demand baseline.",
+                t("next48h.selected_explanation.drivers.easing_detail", locale=locale),
             )
         )
     reconciled = usual + sum(driver.value_mw for driver in positive) - sum(driver.value_mw for driver in negative)
     delta = expected - usual
-    local = point.timestamp.tz_convert(timezone_name)
     if abs(delta) < 50:
-        direction = "near its usual level"
+        direction = t("next48h.selected_explanation.direction.near", locale=locale)
     elif delta > 0:
-        direction = f"{format_signed_mw(delta)} above usual"
+        direction = t(
+            "next48h.selected_explanation.direction.above",
+            locale=locale,
+            delta=format_signed_mw(delta, locale=locale),
+        )
     else:
-        direction = f"{format_signed_mw(delta)} below usual"
-    text = (
-        f"At {local:%a %H:%M}, expected demand is {format_mw(expected)}, {direction}. "
-        f"The deterministic reconciliation is usual demand plus positive drivers minus negative drivers; "
-        f"uncertainty is shown only as the likely range."
+        direction = t(
+            "next48h.selected_explanation.direction.below",
+            locale=locale,
+            delta=format_signed_mw(delta, locale=locale),
+        )
+    text = t(
+        "next48h.selected_explanation.text",
+        locale=locale,
+        hour=local_hour_label(point.timestamp, timezone_name=timezone_name, locale=locale),
+        expected=format_mw(expected, locale=locale),
+        direction=direction,
     )
     return SelectedHourExplanation(
         usual_demand_mw=usual,
@@ -368,6 +440,8 @@ def selected_hour_explanation(
 def confidence_summary(
     point: ForecastPointView,
     snapshot: TwinSnapshot | None = None,
+    *,
+    locale: str = "en",
 ) -> ConfidenceSummary:
     p10, expected, p90 = _demand_interval_values(point, snapshot)
     width = max(p90 - p10, 0.0)
@@ -375,6 +449,7 @@ def confidence_summary(
     horizon = point.horizon_hours or _horizon_from_snapshot(snapshot)
     source = _source_text(point, snapshot)
     fallback = "fallback" in source.lower() or "unsupported" in source.lower()
+    source_display = _source_display(source, locale=locale)
     route_status = "watch" if fallback else "good"
     perf_ratio = point.backtest_error / expected if expected > 0 and point.backtest_error else 0.0
     score = 3.0
@@ -397,44 +472,59 @@ def confidence_summary(
         elif confidence == "high":
             score += 0.3
     if score >= 2.5:
-        level = "High"
+        level_key = "high"
     elif score >= 1.5:
-        level = "Medium"
+        level_key = "medium"
     else:
-        level = "Low"
+        level_key = "low"
+    level = t(f"next48h.confidence.levels.{level_key}", locale=locale)
     factors = [
         ConfidenceFactor(
-            "Forecast horizon",
-            f"{horizon}h",
+            t("next48h.confidence.factors.horizon.name", locale=locale),
+            t("next48h.confidence.factors.horizon.value", locale=locale, hours=horizon),
             "watch" if horizon > 24 else "good",
-            "Longer horizons carry more uncertainty.",
+            t("next48h.confidence.factors.horizon.detail", locale=locale),
         ),
         ConfidenceFactor(
-            "Interval width",
-            f"{width / 1000.0:.1f} GW ({width_ratio:.0%})",
+            t("next48h.confidence.factors.interval_width.name", locale=locale),
+            t(
+                "next48h.confidence.factors.interval_width.value",
+                locale=locale,
+                width=format_gw(width, locale=locale),
+                ratio=format_percentage(width_ratio, locale=locale),
+            ),
             "watch" if width_ratio > 0.12 else "good",
-            "Width of the p10-p90 likely range relative to expected demand.",
+            t("next48h.confidence.factors.interval_width.detail", locale=locale),
         ),
         ConfidenceFactor(
-            "Weather disagreement",
-            "Unavailable",
+            t("next48h.confidence.factors.weather_disagreement.name", locale=locale),
+            t("next48h.confidence.factors.weather_disagreement.value", locale=locale),
             "unknown",
-            "No multi-provider weather-disagreement artifact is attached to this route.",
+            t("next48h.confidence.factors.weather_disagreement.detail", locale=locale),
         ),
         ConfidenceFactor(
-            "Fallback sources",
-            "Fallback route" if fallback else "Model or official route",
+            t("next48h.confidence.factors.fallback_sources.name", locale=locale),
+            t(
+                "next48h.confidence.factors.fallback_sources.fallback_value"
+                if fallback
+                else "next48h.confidence.factors.fallback_sources.model_value",
+                locale=locale,
+            ),
             route_status,
-            source,
+            source_display,
         ),
         ConfidenceFactor(
-            "Recent model performance",
-            format_mw(point.backtest_error) if point.backtest_error else "Unavailable",
+            t("next48h.confidence.factors.recent_performance.name", locale=locale),
+            (
+                format_mw(point.backtest_error, locale=locale)
+                if point.backtest_error
+                else t("next48h.confidence.factors.recent_performance.unavailable_value", locale=locale)
+            ),
             "watch" if perf_ratio > 0.06 else "good",
-            "Most recent route-level error metric available to the page.",
+            t("next48h.confidence.factors.recent_performance.detail", locale=locale),
         ),
     ]
-    detail = f"{level} confidence based on horizon, interval width, route provenance, and recent error evidence."
+    detail = t("next48h.confidence.detail", locale=locale, level=level)
     return ConfidenceSummary(level=level, detail=detail, factors=factors)
 
 
@@ -442,10 +532,11 @@ def future_regional_map_frame(
     snapshot: TwinSnapshot | None,
     *,
     timezone_name: str = "Europe/Paris",
+    locale: str = "en",
 ) -> pd.DataFrame:
     if snapshot is None or not snapshot.regional_demand_context:
         return pd.DataFrame()
-    event_label = format_timestamp(snapshot.event_time, timezone_name=timezone_name)
+    event_label = format_timestamp(snapshot.event_time, timezone_name=timezone_name, locale=locale)
     records: list[dict[str, Any]] = []
     for region in snapshot.regional_demand_context:
         demand = _number(region.forecast.p50.value)
@@ -463,15 +554,15 @@ def future_regional_map_frame(
                 "consumption_mw": demand,
                 "usual_demand_mw": usual,
                 "difference_mw": difference,
-                "demand_label": format_mw(demand),
-                "usual_label": format_mw(usual),
-                "difference_label": format_signed_mw(difference),
-                "freshness_label": f"Forecast hour {event_label}",
-                "source_label": "Future regional demand forecast",
+                "demand_label": format_mw(demand, locale=locale),
+                "usual_label": format_mw(usual, locale=locale),
+                "difference_label": format_signed_mw(difference, locale=locale),
+                "freshness_label": t("next48h.regional.typed_freshness", locale=locale, hour=event_label),
+                "source_label": t("next48h.regional.typed_source", locale=locale),
                 "availability_flag": anomaly_pct is not None,
-                "unavailable_reason": "Future regional demand allocation unavailable.",
+                "unavailable_reason": t("next48h.regional.typed_unavailable", locale=locale),
                 "method": region.method,
-                "note": region.note,
+                "note": t("next48h.regional.typed_note", locale=locale, default=region.note),
             }
         )
     return pd.DataFrame.from_records(records)
@@ -482,11 +573,12 @@ def projected_future_regional_map_frame(
     point: ForecastPointView,
     *,
     timezone_name: str = "Europe/Paris",
+    locale: str = "en",
 ) -> pd.DataFrame:
     if regional.empty:
         return pd.DataFrame()
     frame = regional.copy()
-    event_label = format_timestamp(point.timestamp, timezone_name=timezone_name)
+    event_label = format_timestamp(point.timestamp, timezone_name=timezone_name, locale=locale)
     demand = pd.to_numeric(frame.get("consumption_mw"), errors="coerce")
     usual = pd.to_numeric(frame.get("usual_demand_mw"), errors="coerce")
     demand_total = float(demand.sum()) if demand.notna().any() else 0.0
@@ -516,31 +608,35 @@ def projected_future_regional_map_frame(
             "difference_mw": difference.astype(float),
         }
     )
-    result["demand_label"] = result["consumption_mw"].map(format_mw)
-    result["usual_label"] = result["usual_demand_mw"].map(format_mw)
-    result["difference_label"] = result["difference_mw"].map(format_signed_mw)
-    result["freshness_label"] = f"Forecast hour {event_label}"
-    result["source_label"] = "Projected future regional demand allocation"
+    result["demand_label"] = result["consumption_mw"].map(lambda value: format_mw(value, locale=locale))
+    result["usual_label"] = result["usual_demand_mw"].map(lambda value: format_mw(value, locale=locale))
+    result["difference_label"] = result["difference_mw"].map(lambda value: format_signed_mw(value, locale=locale))
+    result["freshness_label"] = t("next48h.regional.typed_freshness", locale=locale, hour=event_label)
+    result["source_label"] = t("next48h.regional.projected_source", locale=locale)
     result["availability_flag"] = result["demand_anomaly_pct"].notna()
-    result["unavailable_reason"] = "Projected regional demand allocation unavailable."
-    result["method"] = "Current regional demand shares projected onto the selected national forecast hour."
-    result["note"] = (
-        "Projected regional demand is context only; it is not a current reading and not a regional adequacy status."
-    )
+    result["unavailable_reason"] = t("next48h.regional.projected_unavailable", locale=locale)
+    result["method"] = t("next48h.regional.projected_method", locale=locale)
+    result["note"] = t("next48h.regional.projected_note", locale=locale)
     return result
 
 
-def generation_mix_rows(snapshot: TwinSnapshot | None) -> pd.DataFrame:
+def generation_mix_rows(snapshot: TwinSnapshot | None, *, locale: str = "en") -> pd.DataFrame:
+    columns = [
+        t("next48h.tables.generation.component", locale=locale),
+        t("next48h.tables.generation.estimate", locale=locale),
+        t("next48h.tables.generation.provenance", locale=locale),
+        t("next48h.tables.generation.formula", locale=locale),
+    ]
     if snapshot is None or snapshot.generation_mix_estimate is None:
-        return pd.DataFrame(columns=["Component", "Estimate", "Provenance", "Formula"])
+        return pd.DataFrame(columns=columns)
     rows = []
     for component in snapshot.generation_mix_estimate.components:
         rows.append(
             {
-                "Component": _component_label(component.component),
-                "Estimate": format_mw(component.value.value),
-                "Provenance": component.provenance_kind.value.replace("_", " "),
-                "Formula": component.formula or "",
+                columns[0]: _component_label(component.component, locale=locale),
+                columns[1]: format_mw(component.value.value, locale=locale),
+                columns[2]: _provenance_display(component.provenance_kind.value, locale=locale),
+                columns[3]: component.formula or "",
             }
         )
     return pd.DataFrame.from_records(rows)
@@ -586,23 +682,42 @@ def weather_for_hour(
     }
 
 
-def forecast_display_table(forecast: pd.DataFrame, *, timezone_name: str = "Europe/Paris") -> pd.DataFrame:
+def forecast_display_table(
+    forecast: pd.DataFrame,
+    *,
+    timezone_name: str = "Europe/Paris",
+    locale: str = "en",
+) -> pd.DataFrame:
     if forecast.empty:
         return pd.DataFrame()
     frame = forecast.copy()
     frame["timestamp"] = pd.to_datetime(frame["timestamp"], utc=True, errors="coerce")
     return pd.DataFrame(
         {
-            "Time": frame["timestamp"].map(lambda value: format_timestamp(value, timezone_name=timezone_name)),
-            "P10": frame["p10"].map(format_mw),
-            "P50": frame["p50"].map(format_mw),
-            "P90": frame["p90"].map(format_mw),
-            "Usual demand": frame.get("usual_demand_mw", pd.Series(index=frame.index)).map(format_mw),
-            "Balance context": frame.get("balance_label", frame.get("pressure_label", pd.Series(index=frame.index))).fillna("Unknown"),
-            "Carbon": frame.get("carbon_g_per_kwh", pd.Series(index=frame.index)).map(
-                lambda value: "Unavailable" if pd.isna(value) else f"{float(value):.0f} gCO2/kWh"
+            t("next48h.tables.forecast.time", locale=locale): frame["timestamp"].map(
+                lambda value: format_timestamp(value, timezone_name=timezone_name, locale=locale)
             ),
-            "Route": frame.get("source", pd.Series(index=frame.index)).fillna("Unavailable"),
+            t("next48h.tables.forecast.p10", locale=locale): frame["p10"].map(lambda value: format_mw(value, locale=locale)),
+            t("next48h.tables.forecast.p50", locale=locale): frame["p50"].map(lambda value: format_mw(value, locale=locale)),
+            t("next48h.tables.forecast.p90", locale=locale): frame["p90"].map(lambda value: format_mw(value, locale=locale)),
+            t("next48h.tables.forecast.usual_demand", locale=locale): frame.get(
+                "usual_demand_mw", pd.Series(index=frame.index)
+            ).map(lambda value: format_mw(value, locale=locale)),
+            t("next48h.tables.forecast.balance_context", locale=locale): frame.get(
+                "balance_label", frame.get("pressure_label", pd.Series(index=frame.index))
+            )
+            .map(lambda value: _status_display(value, locale=locale))
+            .fillna(t("next48h.tables.forecast.unknown", locale=locale)),
+            t("next48h.tables.forecast.carbon", locale=locale): frame.get("carbon_g_per_kwh", pd.Series(index=frame.index)).map(
+                lambda value: (
+                    t("next48h.tables.forecast.unavailable", locale=locale)
+                    if pd.isna(value)
+                    else format_carbon(float(value), locale=locale)
+                )
+            ),
+            t("next48h.tables.forecast.route", locale=locale): frame.get("source", pd.Series(index=frame.index)).map(
+                lambda value: _source_display(value, locale=locale)
+            ),
         }
     )
 
@@ -698,11 +813,41 @@ def _anomaly_score(anomaly: float | None) -> float:
     return max(0.0, min(1.0, 0.5 + float(anomaly) / 0.36))
 
 
-def _component_label(component: str) -> str:
+def _component_label(component: str, *, locale: str = "en") -> str:
     labels = {
         "nuclear_expected_output_or_availability": "Nuclear expected output",
         "wind": "Wind",
         "solar": "Solar",
         "residual_flexible_sources_and_imports": "Residual flexible sources and imports",
     }
-    return labels.get(component, component.replace("_", " ").title())
+    return t(f"next48h.components.{component}", locale=locale, default=labels.get(component, component.replace("_", " ").title()))
+
+
+def _status_display(value: Any, *, locale: str = "en") -> str:
+    text = str(value or "").strip()
+    if not text or text.lower() == "nan":
+        return t("next48h.status.unknown", locale=locale)
+    key = text.lower().replace("-", "_").replace(" ", "_")
+    return t(f"next48h.status.{key}", locale=locale, default=text)
+
+
+def _source_display(value: Any, *, locale: str = "en") -> str:
+    text = str(value or "").strip()
+    if not text or text.lower() == "nan":
+        return t("next48h.tables.forecast.unavailable", locale=locale)
+    lowered = text.lower()
+    if "usual-demand baseline fallback" in lowered or "usual demand baseline fallback" in lowered:
+        return t("next48h.sources.usual_fallback", locale=locale)
+    if "unsupported" in lowered:
+        return t("next48h.sources.unsupported_route", locale=locale)
+    if "fallback" in lowered:
+        return t("next48h.sources.fallback_route", locale=locale)
+    if text == "Demand forecast":
+        return t("next48h.sources.demand_forecast", locale=locale)
+    return text
+
+
+def _provenance_display(value: Any, *, locale: str = "en") -> str:
+    text = str(value or "").strip()
+    key = text.lower().replace("-", "_").replace(" ", "_")
+    return t(f"next48h.provenance_kinds.{key}", locale=locale, default=text.replace("_", " "))

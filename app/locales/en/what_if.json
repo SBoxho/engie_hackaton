@@ -1,0 +1,363 @@
+{
+  "header": {
+    "subtitle": "Build one visual experiment and compare baseline demand, system response, regional deltas, and limits."
+  },
+  "errors": {
+    "context_unavailable": {
+      "title": "Scenario context unavailable",
+      "body": "The public dashboard could not load a typed or legacy scenario context."
+    },
+    "invalid_range": {
+      "title": "Invalid scenario range"
+    },
+    "api_error": {
+      "title": "Scenario API error",
+      "body": "The backend scenario run did not complete: {error}"
+    }
+  },
+  "notices": {
+    "partial_horizon": {
+      "title": "Partial scenario horizon",
+      "body": "The scenario API returned {count} baseline snapshot(s), fewer than the full 48-hour plus origin window."
+    },
+    "regional_unavailable": {
+      "title": "Regional demand delta unavailable"
+    }
+  },
+  "loading": {
+    "title": "Running scenario",
+    "body": "The scenario API is calculating baseline deltas and response ranges.",
+    "spinner": "Running scenario estimate..."
+  },
+  "sources": {
+    "scenario_api": "Scenario API",
+    "scenario_api_estimate": "Scenario API estimate"
+  },
+  "common": {
+    "yes": "yes",
+    "no": "no"
+  },
+  "scenarios": {
+    "cold_snap": {
+      "label": "Cold snap",
+      "short": "Cold snap",
+      "concept": "Demand",
+      "detail": "Heating-sensitive demand changes during the selected window."
+    },
+    "generation_unavailability": {
+      "label": "Generating unit unavailable",
+      "short": "Unit unavailable",
+      "concept": "Supply",
+      "detail": "Available generation is reduced during the selected window."
+    },
+    "ev_charging_shift": {
+      "label": "EV charging shift",
+      "short": "EV shift",
+      "concept": "Demand timing",
+      "detail": "Evening charging is moved into the overnight target window."
+    }
+  },
+  "builder": {
+    "kicker": "Scenario Builder",
+    "title": "Change -> System response -> Outcome",
+    "copy": "One active scenario is run at a time against the typed 48-hour scenario API.",
+    "preset": "Scenario preset",
+    "scope": {
+      "national": "National",
+      "regional": "Selected region"
+    },
+    "geographic_scope": "Geographic scope",
+    "region": "Region",
+    "magnitude": "Magnitude",
+    "cold_caption": "{value} colder",
+    "generation_caption": "{value} unavailable",
+    "asset_label": "Asset label",
+    "participation": "Participation",
+    "ev_shifted_caption": "{value} EVs shifted",
+    "energy_per_ev": "Energy per EV (kWh)",
+    "participation_rate": "Participation rate",
+    "source_window": "Source charging window",
+    "target_window": "Target charging window",
+    "concept_affected": "Concept affected",
+    "scenario_window": "Scenario window",
+    "start_time": "Start time: {value}",
+    "end_time": "End time: {value}",
+    "duration": "Duration: {value}h"
+  },
+  "validation": {
+    "end_after_start": "Scenario end time must be after start time.",
+    "ev_windows_different": "EV source and target charging windows must be different.",
+    "ev_participation_positive": "EV participation must be greater than zero.",
+    "magnitude_positive": "Scenario magnitude must be greater than zero."
+  },
+  "delta": {
+    "kicker": "Delta First",
+    "title": "What changed"
+  },
+  "metrics": {
+    "peak_demand_change": {
+      "label": "Peak-demand change",
+      "detail": "Scenario API P50 peak compared with baseline P50 peak."
+    },
+    "minimum_balance_change": {
+      "label": "Minimum balance change",
+      "detail": "Change in the minimum modelled balance-context score."
+    },
+    "watch_high_hours": {
+      "label": "Watch/High hours",
+      "detail": "{count} status transition hour(s) changed."
+    },
+    "import_export_range": {
+      "label": "Import/export range",
+      "detail": "Estimated net import/export response across the horizon."
+    },
+    "carbon_range": {
+      "label": "Carbon impact",
+      "detail": "Estimated response-mix carbon range across the horizon."
+    }
+  },
+  "timeline": {
+    "kicker": "Timeline",
+    "title": "48-hour event window",
+    "note_title": "Scenario block and baseline demand context",
+    "note_detail": "{magnitude} from {window}."
+  },
+  "baseline": {
+    "kicker": "Baseline Vs Scenario",
+    "title": "P50, uncertainty, delta area, and status transitions"
+  },
+  "selected_hour": {
+    "label": "Selected hour",
+    "option": "{time} - {status} - {delta}",
+    "previous": "Previous hour",
+    "next": "Next hour",
+    "caption": "Selected scenario hour: {label}"
+  },
+  "selected_metrics": {
+    "baseline_p50": {
+      "label": "Baseline P50"
+    },
+    "scenario_p50": {
+      "label": "Scenario P50"
+    },
+    "demand_delta": {
+      "label": "Demand delta",
+      "detail": "Selected-hour demand movement."
+    },
+    "residual_unresolved": {
+      "label": "Residual unresolved",
+      "detail": "After estimated flexible generation and import/export response."
+    }
+  },
+  "demand_delta": {
+    "note_title": "Hourly demand delta",
+    "note_detail": "Negative bars reduce demand in that hour; positive bars add demand in that hour."
+  },
+  "generation": {
+    "kicker": "Generation Response",
+    "title": "Estimated flexible generation, imports/exports, and unresolved residual",
+    "note_title": "Estimated response ranges",
+    "methods_expander": "Response range methods"
+  },
+  "regional": {
+    "kicker": "Regional Comparison",
+    "title": "Single delta map",
+    "no_allocation": {
+      "title": "No regional demand-delta allocation",
+      "label": "Regional comparison"
+    },
+    "no_changed_regions": "No regions have a demand delta in this scenario API result.",
+    "delta_label": "{peak} peak, {total}",
+    "delta_unavailable": "Regional demand delta unavailable",
+    "no_delta": "No demand delta"
+  },
+  "assumptions": {
+    "expander": "Assumptions and limitations",
+    "sensitivity_heading": "Model sensitivity, not causal proof.",
+    "sensitivity_body": "This is an educational scenario estimate, not an operator dispatch forecast.",
+    "api_heading": "Scenario API assumptions",
+    "limitations_heading": "Limitations",
+    "versions_heading": "Data and model versions"
+  },
+  "versions": {
+    "result_id": "Result ID",
+    "baseline_run": "Baseline run",
+    "generated_at": "Generated at",
+    "model": "Model: {name}",
+    "data": "Data: {name}"
+  },
+  "provenance": {
+    "scenario_api_result": "Scenario API result",
+    "baseline_forecast_run": "Baseline forecast run",
+    "scenario_preset": "Scenario preset",
+    "regional_electricity": "Regional electricity"
+  },
+  "magnitude": {
+    "cold_snap": "{value} colder",
+    "generation_unavailability": "{value} unavailable",
+    "generation_unavailability_asset": "{asset}: {value} unavailable",
+    "ev_charging_shift": "{vehicles} EVs, {energy} kWh each, {participation} participating",
+    "generic": "Scenario magnitude"
+  },
+  "window": {
+    "label": "{start} to {end} ({duration}h window)"
+  },
+  "status": {
+    "unknown": "Unknown",
+    "normal": "Normal",
+    "watch": "Watch",
+    "high": "High",
+    "low": "Low"
+  },
+  "card_status": {
+    "watch": "Watch",
+    "green": "Normal",
+    "info": "Info"
+  },
+  "chain": {
+    "cold_snap": {
+      "1": {
+        "title": "Colder weather",
+        "detail": "Temperature input changes"
+      },
+      "2": {
+        "title": "Heating demand rises",
+        "detail": "Demand P50 is rerun for active hours"
+      },
+      "3": {
+        "title": "Residual load rises",
+        "detail": "More demand remains after weather-sensitive supply"
+      },
+      "4": {
+        "title": "Flexible generation/imports respond",
+        "detail": "Estimated response ranges absorb part of the residual"
+      },
+      "5": {
+        "title": "Balance tightens",
+        "detail": "App balance status can move"
+      }
+    },
+    "generation_unavailability": {
+      "1": {
+        "title": "Unit unavailable",
+        "detail": "Capacity is removed from availability"
+      },
+      "2": {
+        "title": "Available generation falls",
+        "detail": "Demand is unchanged"
+      },
+      "3": {
+        "title": "Residual load rises",
+        "detail": "The same demand has less available supply"
+      },
+      "4": {
+        "title": "Flexible supply/imports respond",
+        "detail": "Estimated response ranges absorb part of the residual"
+      },
+      "5": {
+        "title": "Balance context changes",
+        "detail": "App balance status can move"
+      }
+    },
+    "ev_charging_shift": {
+      "1": {
+        "title": "EV charging shifts",
+        "detail": "The same energy moves windows"
+      },
+      "2": {
+        "title": "Evening demand falls",
+        "detail": "Source-window demand delta is negative"
+      },
+      "3": {
+        "title": "Overnight demand rises",
+        "detail": "Target-window demand delta is positive"
+      },
+      "4": {
+        "title": "Peak may move",
+        "detail": "Rebound hours are flagged by the scenario API"
+      },
+      "5": {
+        "title": "Carbon range changes",
+        "detail": "Response-mix emissions are estimated as a range"
+      }
+    }
+  },
+  "charts": {
+    "event_timeline": {
+      "baseline_context": "Baseline demand context",
+      "baseline_hover": "Baseline: %{y:,.0f} MW<extra></extra>",
+      "handles": "Start and end handles"
+    },
+    "baseline_scenario": {
+      "baseline_p90": "Baseline p90",
+      "baseline_uncertainty": "Baseline uncertainty",
+      "uncertainty_hover": "P10-P90: %{y:,.0f} MW<extra></extra>",
+      "baseline_p50": "Baseline P50",
+      "baseline_p50_hover": "Baseline P50: %{y:,.0f} MW<extra></extra>",
+      "delta_upper": "Scenario delta upper",
+      "delta_area": "Delta area",
+      "scenario_p50": "Scenario P50",
+      "scenario_hover": "<b>%{x|%a %d %b %H:%M}</b><br>Scenario P50: %{y:,.0f} MW<br>Status: %{customdata[1]}<br>Demand delta: %{customdata[2]:+,.0f} MW<br>Import/export response: %{customdata[3]:+,.0f} MW<extra></extra>",
+      "selected_hour": "Selected hour",
+      "yaxis": "Demand MW"
+    },
+    "demand_delta": {
+      "name": "Demand delta",
+      "hover": "Demand delta: %{y:+,.0f} MW<extra></extra>"
+    },
+    "generation_response": {
+      "flexible_generation": "Flexible generation",
+      "imports_exports": "Imports / exports",
+      "unresolved_residual": "Unresolved residual",
+      "hover": "{label}: {low} to {high} MWh<extra></extra>",
+      "xaxis": "Estimated MWh delta"
+    },
+    "regional_delta": {
+      "colorbar": "Peak delta",
+      "changed_hover": "<b>%{customdata[0]}</b><br>Peak delta: %{customdata[1]:+,.0f} MW<br>Total delta: %{customdata[2]:+,.0f} MWh<br>Changed: %{customdata[3]}<extra></extra>",
+      "changed_name": "Changed regional demand delta",
+      "unchanged_name": "Unchanged regional demand delta",
+      "unavailable_hover": "<b>%{customdata[0]}</b><br>Demand delta: Unavailable<br>Reason: %{customdata[1]}<extra></extra>",
+      "unavailable_name": "Unavailable regional demand delta"
+    }
+  },
+  "tables": {
+    "changed_regions": {
+      "region": "Region",
+      "peak_demand_delta": "Peak demand delta",
+      "total_energy_delta": "Total energy delta"
+    }
+  },
+  "formats": {
+    "watch_high_delta": "{value} Watch/High h",
+    "score_delta": "{value} score",
+    "range": "{low} to {high}"
+  },
+  "api_text": {
+    "generation_unavailability_regional_reason": "Generating-unit unavailability is represented as national supply availability only in v1.",
+    "regional_delta_method": "Regional demand deltas are allocated from the reconciled regional demand shares; this is not regional adequacy.",
+    "regional_delta_unavailable": "Regional scenario demand-delta data is unavailable.",
+    "national_supply_only": "This scenario changes national supply context only.",
+    "no_regional_allocation": "This scenario type has no regional demand allocation in v1.",
+    "scenario_response_estimate": "Scenario response estimate.",
+    "import_export_method": "After flexible generation response, a configured fraction of the remaining residual is represented as higher net imports, lower exports, lower net imports, or higher exports.",
+    "generation_response_method": "Flexible generation absorbs a configured portion of residual change; wind and solar follow baseline forecasts.",
+    "carbon_method": "Each positive residual MWh is multiplied by a plausible response-mix intensity range; each negative residual MWh is treated as avoided response-mix output.",
+    "caveat_directional": "This is a directional public-decision scenario, not an operator dispatch forecast.",
+    "caveat_ranges": "Imports, exports, flexible generation, and unresolved residual are represented as ranges to avoid false precision.",
+    "caveat_import_requirement": "The engine does not make import requirement automatically equal to peak-demand change.",
+    "caveat_carbon": "Carbon is a plausible response-mix range, not verified emissions accounting.",
+    "assumption_wind_solar": "Wind and solar follow their baseline adjusted forecasts.",
+    "assumption_nuclear": "Nuclear follows availability context; generating-unit unavailability reduces available supply, not demand.",
+    "assumption_cold_snap": "Cold-snap demand rerun uses heating_sensitivity_mw_per_c and deterministic local-hour multipliers.",
+    "assumption_ev_shift": "EV charging shift conserves total modelled scenario energy across complete source and target windows.",
+    "assumption_artifact": "Scenario assumptions artifact: {version}.",
+    "assumption_generation_fraction": "Flexible generation response fraction range: {fraction} of residual change.",
+    "assumption_import_fraction": "Import/export response fraction range after flexible response: {fraction}.",
+    "request_assumptions": "Request assumptions: interface {interface}; estimate {estimate}; single active scenario: {single_active}.",
+    "request_assumptions_raw": "Request assumptions: {payload}",
+    "estimate_educational_directional": "educational directional scenario",
+    "single_active_yes": "yes",
+    "single_active_no": "no"
+  }
+}

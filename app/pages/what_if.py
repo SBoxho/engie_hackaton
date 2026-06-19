@@ -16,8 +16,15 @@ from app.components.foundation import (
     render_trust_notices,
 )
 from app.components.public import about_project_drawer, provenance_drawer, render_public_header
-from app.formatting import format_mw, format_signed_mw, format_timestamp
+from app.formatting import (
+    format_mw,
+    format_number,
+    format_signed_mw,
+    format_temperature,
+    format_timestamp,
+)
 from app.generated.energy_twin_client import EnergyTwinApiClient, ScenarioRunQuery
+from app.i18n import nav_label, t
 from app.state import mode_for_page, persist_app_state, read_app_state, with_updates
 from app.view_models import add_regional_anomalies, build_forecast_points
 from app.what_if_view import (
@@ -25,6 +32,7 @@ from app.what_if_view import (
     ScenarioControls,
     baseline_scenario_chart,
     build_scenario_request,
+    card_status_display,
     causal_chain_steps,
     chain_markup,
     changed_region_table,
@@ -41,12 +49,15 @@ from app.what_if_view import (
     regional_delta_choropleth,
     regional_delta_frame,
     restore_scenario_controls,
+    scenario_preset_display,
     scenario_frames,
     scenario_query_params,
     scenario_summary,
     scenario_window_label,
     selected_hour_row,
     selected_timestamp_from_chart_event,
+    status_display_label,
+    translate_api_text,
     validate_controls,
 )
 from src.contracts.energy_twin import DomainMode
@@ -98,15 +109,15 @@ def _window_option_label(window: tuple[str, str]) -> str:
     return f"{window[0]}-{window[1]}"
 
 
-def _scenario_result_notices(result: dict, *, base_notices: list[TrustNotice]) -> list[TrustNotice]:
+def _scenario_result_notices(result: dict, *, base_notices: list[TrustNotice], locale: str) -> list[TrustNotice]:
     notices = list(base_notices)
     snapshot_count = int(result.get("data_versions", {}).get("baseline_snapshot_count") or 0)
     if snapshot_count and snapshot_count < 49:
         notices.append(
             TrustNotice(
                 "partial",
-                "Partial scenario horizon",
-                f"The scenario API returned {snapshot_count} baseline snapshot(s), fewer than the full 48-hour plus origin window.",
+                t("what_if.notices.partial_horizon.title", locale=locale),
+                t("what_if.notices.partial_horizon.body", locale=locale, count=snapshot_count),
             )
         )
     regional_deltas = result.get("regional_deltas") or {}
@@ -114,35 +125,41 @@ def _scenario_result_notices(result: dict, *, base_notices: list[TrustNotice]) -
         notices.append(
             TrustNotice(
                 "partial",
-                "Regional demand delta unavailable",
-                str(regional_deltas.get("reason") or "This scenario type has no regional demand allocation in v1."),
+                t("what_if.notices.regional_unavailable.title", locale=locale),
+                translate_api_text(
+                    regional_deltas.get("reason") or "This scenario type has no regional demand allocation in v1.",
+                    locale=locale,
+                ),
             )
         )
     return notices
 
 
-def _selected_hour_controls(result: dict, selected_timestamp: pd.Timestamp) -> pd.Timestamp:
+def _selected_hour_controls(result: dict, selected_timestamp: pd.Timestamp, *, locale: str) -> pd.Timestamp:
     _, scenario = scenario_frames(result)
     if scenario.empty:
         return selected_timestamp
     labels = [
-        (
-            f"{format_timestamp(row.timestamp, timezone_name=settings.timezone, include_date=False)} - "
-            f"{str(row.balance_status).title()} - {format_signed_mw(row.demand_delta_mw)}"
+        t(
+            "what_if.selected_hour.option",
+            locale=locale,
+            time=format_timestamp(row.timestamp, timezone_name=settings.timezone, include_date=False, locale=locale),
+            status=status_display_label(row.balance_status, locale=locale),
+            delta=format_signed_mw(row.demand_delta_mw, locale=locale),
         )
         for row in scenario.itertuples(index=False)
     ]
     distances = (scenario["timestamp"] - selected_timestamp).abs()
     selected_index = int(distances.idxmin())
-    selected_label = st.selectbox("Selected hour", labels, index=selected_index)
+    selected_label = st.selectbox(t("what_if.selected_hour.label", locale=locale), labels, index=selected_index)
     new_index = labels.index(selected_label)
     nav_cols = st.columns([1, 1, 3], gap="small")
     with nav_cols[0]:
-        previous_clicked = st.button("Previous hour", disabled=new_index <= 0, width="stretch")
+        previous_clicked = st.button(t("what_if.selected_hour.previous", locale=locale), disabled=new_index <= 0, width="stretch")
     with nav_cols[1]:
-        next_clicked = st.button("Next hour", disabled=new_index >= len(labels) - 1, width="stretch")
+        next_clicked = st.button(t("what_if.selected_hour.next", locale=locale), disabled=new_index >= len(labels) - 1, width="stretch")
     with nav_cols[2]:
-        st.caption(f"Selected scenario hour: {labels[new_index]}")
+        st.caption(t("what_if.selected_hour.caption", locale=locale, label=labels[new_index]))
     if previous_clicked:
         new_index = max(0, new_index - 1)
     if next_clicked:
@@ -151,11 +168,15 @@ def _selected_hour_controls(result: dict, selected_timestamp: pd.Timestamp) -> p
 
 
 state = read_app_state(default_mode=DomainMode.REPLAY)
+locale = state.locale
 app_context = load_typed_public_context(state)
 context = app_context.legacy
 energy: pd.DataFrame = context["energy"]
 if energy.empty:
-    error_state("Scenario context unavailable", "The public dashboard could not load a typed or legacy scenario context.")
+    error_state(
+        t("what_if.errors.context_unavailable.title", locale=locale),
+        t("what_if.errors.context_unavailable.body", locale=locale),
+    )
     st.stop()
 
 regional = add_regional_anomalies(context["regional"], context["regional_history"], timezone=settings.timezone)
@@ -188,8 +209,8 @@ state = with_updates(
 persist_app_state(state)
 
 render_public_header(
-    "WHAT IF?",
-    "Build one visual experiment and compare baseline demand, system response, regional deltas, and limits.",
+    nav_label("what_if", locale=state.locale),
+    t("what_if.header.subtitle", locale=locale),
     state.mode.value.upper(),
 )
 render_context_bar(
@@ -206,29 +227,38 @@ render_trust_notices(
 )
 
 section_header(
-    "Scenario Builder",
-    "Change -> System response -> Outcome",
-    "One active scenario is run at a time against the typed 48-hour scenario API.",
+    t("what_if.builder.kicker", locale=locale),
+    t("what_if.builder.title", locale=locale),
+    t("what_if.builder.copy", locale=locale),
 )
 
-preset_labels = [preset["label"] for preset in SCENARIO_PRESETS.values()]
-label_to_key = {preset["label"]: key for key, preset in SCENARIO_PRESETS.items()}
+preset_labels = [scenario_preset_display(key, locale=locale)["label"] for key in SCENARIO_PRESETS]
+label_to_key = {scenario_preset_display(key, locale=locale)["label"]: key for key in SCENARIO_PRESETS}
 selected_label = st.selectbox(
-    "Scenario preset",
+    t("what_if.builder.preset", locale=locale),
     preset_labels,
     index=list(SCENARIO_PRESETS).index(control_defaults.scenario_type),
 )
 scenario_type = label_to_key[selected_label]
-preset = SCENARIO_PRESETS[scenario_type]
+preset = scenario_preset_display(scenario_type, locale=locale)
 scenario_changed = scenario_type != control_defaults.scenario_type
 initial_magnitude = _default_magnitude_for(scenario_type) if scenario_changed else control_defaults.magnitude
 
 builder_cols = st.columns([1, 1, 1], gap="large")
 with builder_cols[0]:
-    scope_options = ["National"] if scenario_type == "generation_unavailability" else ["National", "Selected region"]
-    default_scope_label = "Selected region" if control_defaults.scope_type == "regional" and "Selected region" in scope_options else "National"
-    scope_label = st.selectbox("Geographic scope", scope_options, index=scope_options.index(default_scope_label))
-    scope_type = "regional" if scope_label == "Selected region" else "national"
+    scope_options = [("national", t("what_if.builder.scope.national", locale=locale))]
+    if scenario_type != "generation_unavailability":
+        scope_options.append(("regional", t("what_if.builder.scope.regional", locale=locale)))
+    default_scope_type = "regional" if control_defaults.scope_type == "regional" and any(key == "regional" for key, _ in scope_options) else "national"
+    scope_labels = [label for _, label in scope_options]
+    scope_label_to_type = {label: key for key, label in scope_options}
+    default_scope_label = dict(scope_options)[default_scope_type]
+    scope_label = st.selectbox(
+        t("what_if.builder.geographic_scope", locale=locale),
+        scope_labels,
+        index=scope_labels.index(default_scope_label),
+    )
+    scope_type = scope_label_to_type[scope_label]
     region_codes = regional["region_code"].astype(str).tolist() if not regional.empty and "region_code" in regional else list(REGION_NAMES)
     region_labels = {
         str(row.region_code): str(getattr(row, "region_display", REGION_NAMES.get(str(row.region_code), row.region_code)))
@@ -238,7 +268,7 @@ with builder_cols[0]:
     if selected_region not in region_codes:
         selected_region = region_codes[0]
     region = st.selectbox(
-        "Region",
+        t("what_if.builder.region", locale=locale),
         region_codes,
         index=region_codes.index(selected_region),
         format_func=lambda code: region_labels.get(str(code), str(code)),
@@ -248,14 +278,14 @@ with builder_cols[1]:
     if scenario_type == "cold_snap":
         magnitude = float(
             st.slider(
-                "Magnitude",
+                t("what_if.builder.magnitude", locale=locale),
                 min_value=0.5,
                 max_value=8.0,
                 value=min(max(float(initial_magnitude), 0.5), 8.0),
                 step=0.5,
             )
         )
-        st.caption(f"{magnitude:g} deg C colder")
+        st.caption(t("what_if.builder.cold_caption", locale=locale, value=format_temperature(magnitude, locale=locale)))
         asset_name = control_defaults.asset_name
         ev_energy_kwh = control_defaults.ev_energy_kwh
         ev_participation = control_defaults.ev_participation
@@ -264,15 +294,15 @@ with builder_cols[1]:
     elif scenario_type == "generation_unavailability":
         magnitude = float(
             st.slider(
-                "Magnitude",
+                t("what_if.builder.magnitude", locale=locale),
                 min_value=0.2,
                 max_value=6.0,
                 value=min(max(float(initial_magnitude), 0.2), 6.0),
                 step=0.1,
             )
         )
-        st.caption(f"{magnitude:g} GW unavailable")
-        asset_name = st.text_input("Asset label", value=control_defaults.asset_name, max_chars=40)
+        st.caption(t("what_if.builder.generation_caption", locale=locale, value=f"{format_number(magnitude, decimals=1, locale=locale)} GW"))
+        asset_name = st.text_input(t("what_if.builder.asset_label", locale=locale), value=control_defaults.asset_name, max_chars=40)
         ev_energy_kwh = control_defaults.ev_energy_kwh
         ev_participation = control_defaults.ev_participation
         original_window = control_defaults.original_window
@@ -280,18 +310,18 @@ with builder_cols[1]:
     else:
         magnitude = float(
             st.number_input(
-                "Participation",
+                t("what_if.builder.participation", locale=locale),
                 min_value=10_000,
                 max_value=500_000,
                 value=int(min(max(float(initial_magnitude), 10_000), 500_000)),
                 step=10_000,
             )
         )
-        st.caption(f"{int(magnitude):,} EVs shifted")
+        st.caption(t("what_if.builder.ev_shifted_caption", locale=locale, value=format_number(int(magnitude), locale=locale)))
         asset_name = control_defaults.asset_name
         ev_energy_kwh = float(
             st.number_input(
-                "Energy per EV (kWh)",
+                t("what_if.builder.energy_per_ev", locale=locale),
                 min_value=2.0,
                 max_value=30.0,
                 value=min(max(float(control_defaults.ev_energy_kwh), 2.0), 30.0),
@@ -300,7 +330,7 @@ with builder_cols[1]:
         )
         ev_participation = float(
             st.slider(
-                "Participation rate",
+                t("what_if.builder.participation_rate", locale=locale),
                 min_value=0.05,
                 max_value=1.0,
                 value=min(max(float(control_defaults.ev_participation), 0.05), 1.0),
@@ -310,20 +340,20 @@ with builder_cols[1]:
         source_options = [_window_option_label(option) for option in WINDOW_OPTIONS]
         source_default = _window_option_label(control_defaults.original_window)
         source_label = st.selectbox(
-            "Source charging window",
+            t("what_if.builder.source_window", locale=locale),
             source_options,
             index=source_options.index(source_default) if source_default in source_options else source_options.index("18:00-22:00"),
         )
         target_default = _window_option_label(control_defaults.target_window)
         target_label = st.selectbox(
-            "Target charging window",
+            t("what_if.builder.target_window", locale=locale),
             source_options,
             index=source_options.index(target_default) if target_default in source_options else source_options.index("01:00-05:00"),
         )
         original_window = tuple(source_label.split("-", 1))  # type: ignore[assignment]
         target_window = tuple(target_label.split("-", 1))  # type: ignore[assignment]
 with builder_cols[2]:
-    st.metric("Concept affected", preset["concept"])
+    st.metric(t("what_if.builder.concept_affected", locale=locale), preset["concept"])
     st.caption(preset["detail"])
 
 default_window = (
@@ -341,7 +371,7 @@ default_window = (
 if default_window[1] <= default_window[0]:
     default_window = (default_window[0], min(default_window[0] + 1, 48))
 window = st.slider(
-    "Scenario window",
+    t("what_if.builder.scenario_window", locale=locale),
     min_value=0,
     max_value=48,
     value=default_window,
@@ -350,11 +380,29 @@ window = st.slider(
 start_offset, end_offset = int(window[0]), int(window[1])
 timeline_cols = st.columns(3)
 with timeline_cols[0]:
-    st.caption(f"Start time: {format_timestamp(origin + pd.Timedelta(hours=start_offset), timezone_name=settings.timezone)}")
+    st.caption(
+        t(
+            "what_if.builder.start_time",
+            locale=locale,
+            value=format_timestamp(origin + pd.Timedelta(hours=start_offset), timezone_name=settings.timezone, locale=locale),
+        )
+    )
 with timeline_cols[1]:
-    st.caption(f"End time: {format_timestamp(origin + pd.Timedelta(hours=end_offset), timezone_name=settings.timezone)}")
+    st.caption(
+        t(
+            "what_if.builder.end_time",
+            locale=locale,
+            value=format_timestamp(origin + pd.Timedelta(hours=end_offset), timezone_name=settings.timezone, locale=locale),
+        )
+    )
 with timeline_cols[2]:
-    st.caption(f"Duration: {max(end_offset - start_offset, 0)}h")
+    st.caption(
+        t(
+            "what_if.builder.duration",
+            locale=locale,
+            value=format_number(max(end_offset - start_offset, 0), locale=locale),
+        )
+    )
 
 controls = ScenarioControls(
     scenario_type=normalize_scenario_key(scenario_type),
@@ -379,28 +427,29 @@ state = with_updates(
 )
 persist_app_state(state)
 
-validation_error = validate_controls(controls)
+validation_error = validate_controls(controls, locale=locale)
 if validation_error:
-    error_state("Invalid scenario range", validation_error)
+    error_state(t("what_if.errors.invalid_range.title", locale=locale), validation_error)
     st.stop()
 
 request = build_scenario_request(controls, baseline_from_time=origin, timezone_name=settings.timezone)
 placeholder = st.empty()
 try:
     with placeholder.container():
-        loading_state("Running scenario", "The scenario API is calculating baseline deltas and response ranges.")
-    with st.spinner("Running scenario estimate..."):
+        loading_state(t("what_if.loading.title", locale=locale), t("what_if.loading.body", locale=locale))
+    with st.spinner(t("what_if.loading.spinner", locale=locale)):
         result = EnergyTwinApiClient().run_scenario(ScenarioRunQuery(request=request, use_cache=True))
     placeholder.empty()
 except (OSError, TypeError, ValueError, KeyError) as exc:
     placeholder.empty()
-    error_state("Scenario API error", f"The backend scenario run did not complete: {exc}")
+    error_state(t("what_if.errors.api_error.title", locale=locale), t("what_if.errors.api_error.body", locale=locale, error=exc))
     st.stop()
 
 render_trust_notices(
     _scenario_result_notices(
         result,
         base_notices=[],
+        locale=locale,
     )
 )
 
@@ -413,72 +462,72 @@ if state.selected_timestamp is None or pd.Timestamp(state.selected_timestamp).tz
 
 summary = scenario_summary(result)
 
-section_header("Delta First", "What changed")
+section_header(t("what_if.delta.kicker", locale=locale), t("what_if.delta.title", locale=locale))
 metric_cols = st.columns(3)
 with metric_cols[0]:
     metric_card(
-        "Peak-demand change",
-        format_signed_mw(summary.peak_demand_delta_mw),
-        "Scenario API P50 peak compared with baseline P50 peak.",
+        t("what_if.metrics.peak_demand_change.label", locale=locale),
+        format_signed_mw(summary.peak_demand_delta_mw, locale=locale),
+        t("what_if.metrics.peak_demand_change.detail", locale=locale),
         icon="P",
-        status="watch" if summary.peak_demand_delta_mw > 0 else "green",
-        provenance="scenario",
+        status=card_status_display("watch" if summary.peak_demand_delta_mw > 0 else "green", locale=locale),
     )
 with metric_cols[1]:
     metric_card(
-        "Minimum balance change",
-        format_score_delta(summary.min_balance_score_delta),
-        "Change in the minimum modelled balance-context score.",
+        t("what_if.metrics.minimum_balance_change.label", locale=locale),
+        format_score_delta(summary.min_balance_score_delta, locale=locale),
+        t("what_if.metrics.minimum_balance_change.detail", locale=locale),
         icon="B",
-        status="watch" if summary.min_balance_score_delta > 0 else "green",
-        provenance="scenario",
+        status=card_status_display("watch" if summary.min_balance_score_delta > 0 else "green", locale=locale),
     )
 with metric_cols[2]:
     metric_card(
-        "Watch/High hours",
-        format_watch_high_delta(summary.watch_high_hour_delta),
-        f"{summary.changed_watch_high_hours} status transition hour(s) changed.",
+        t("what_if.metrics.watch_high_hours.label", locale=locale),
+        format_watch_high_delta(summary.watch_high_hour_delta, locale=locale),
+        t("what_if.metrics.watch_high_hours.detail", locale=locale, count=summary.changed_watch_high_hours),
         icon="!",
-        status="watch" if summary.watch_high_hour_delta > 0 else "green",
-        provenance="scenario",
+        status=card_status_display("watch" if summary.watch_high_hour_delta > 0 else "green", locale=locale),
     )
 range_cols = st.columns(2)
 with range_cols[0]:
     metric_card(
-        "Import/export range",
-        format_signed_range(summary.import_export_delta_mwh_range, unit="MWh"),
-        "Estimated net import/export response across the horizon.",
+        t("what_if.metrics.import_export_range.label", locale=locale),
+        format_signed_range(summary.import_export_delta_mwh_range, unit="MWh", locale=locale),
+        t("what_if.metrics.import_export_range.detail", locale=locale),
         icon="I/E",
-        status="watch" if summary.import_export_delta_mwh_range[1] > 0 else "green",
-        provenance="scenario",
+        status=card_status_display("watch" if summary.import_export_delta_mwh_range[1] > 0 else "green", locale=locale),
     )
 with range_cols[1]:
     metric_card(
-        "Carbon range",
-        format_carbon_range(summary.carbon_delta_tonnes_range),
-        "Estimated response-mix carbon range across the horizon.",
+        t("what_if.metrics.carbon_range.label", locale=locale),
+        format_carbon_range(summary.carbon_delta_tonnes_range, locale=locale),
+        t("what_if.metrics.carbon_range.detail", locale=locale),
         icon="CO2",
-        status="watch" if summary.carbon_delta_tonnes_range[1] > 0 else "green",
-        provenance="scenario",
+        status=card_status_display("watch" if summary.carbon_delta_tonnes_range[1] > 0 else "green", locale=locale),
     )
 
-st.html(chain_markup(causal_chain_steps(result)))
+st.html(chain_markup(causal_chain_steps(result, locale=locale)))
 
-section_header("Timeline", "48-hour event window")
+section_header(t("what_if.timeline.kicker", locale=locale), t("what_if.timeline.title", locale=locale))
 viz_note(
-    "Scenario block and baseline demand context",
-    f"{magnitude_label_from_request(result)} from {scenario_window_label(result, timezone_name=settings.timezone)}.",
-    source="Scenario API",
+    t("what_if.timeline.note_title", locale=locale),
+    t(
+        "what_if.timeline.note_detail",
+        locale=locale,
+        magnitude=magnitude_label_from_request(result, locale=locale),
+        window=scenario_window_label(result, timezone_name=settings.timezone, locale=locale),
+    ),
+    source=t("what_if.sources.scenario_api", locale=locale),
 )
 st.plotly_chart(
-    event_timeline_chart(result, selected_timestamp=selected_timestamp, timezone_name=settings.timezone),
+    event_timeline_chart(result, selected_timestamp=selected_timestamp, timezone_name=settings.timezone, locale=locale),
     width="stretch",
     config={"displayModeBar": False},
 )
 
-section_header("Baseline Vs Scenario", "P50, uncertainty, delta area, and status transitions")
+section_header(t("what_if.baseline.kicker", locale=locale), t("what_if.baseline.title", locale=locale))
 chart_event = st.plotly_chart(
-    baseline_scenario_chart(result, selected_timestamp=selected_timestamp, timezone_name=settings.timezone),
+    baseline_scenario_chart(result, selected_timestamp=selected_timestamp, timezone_name=settings.timezone, locale=locale),
     key="what_if_baseline_scenario_chart",
     width="stretch",
     on_select="rerun",
@@ -489,7 +538,7 @@ if chart_timestamp is not None and chart_timestamp != selected_timestamp:
     persist_app_state(with_updates(state, selected_timestamp=chart_timestamp.to_pydatetime()))
     st.rerun()
 
-selected_from_controls = _selected_hour_controls(result, selected_timestamp)
+selected_from_controls = _selected_hour_controls(result, selected_timestamp, locale=locale)
 if selected_from_controls != selected_timestamp:
     persist_app_state(with_updates(state, selected_timestamp=selected_from_controls.to_pydatetime()))
     st.rerun()
@@ -501,105 +550,107 @@ if selected:
     selected_cols = st.columns(4)
     with selected_cols[0]:
         metric_card(
-            "Baseline P50",
-            format_mw(baseline_row.get("demand_mw")),
-            str(baseline_row.get("balance_status", "unknown")).title(),
+            t("what_if.selected_metrics.baseline_p50.label", locale=locale),
+            format_mw(baseline_row.get("demand_mw"), locale=locale),
+            status_display_label(baseline_row.get("balance_status", "unknown"), locale=locale),
             icon="B",
-            provenance="scenario",
         )
     with selected_cols[1]:
         metric_card(
-            "Scenario P50",
-            format_mw(scenario_row.get("demand_mw")),
-            str(scenario_row.get("balance_status", "unknown")).title(),
+            t("what_if.selected_metrics.scenario_p50.label", locale=locale),
+            format_mw(scenario_row.get("demand_mw"), locale=locale),
+            status_display_label(scenario_row.get("balance_status", "unknown"), locale=locale),
             icon="S",
-            provenance="scenario",
         )
     with selected_cols[2]:
         metric_card(
-            "Demand delta",
-            format_signed_mw(scenario_row.get("demand_delta_mw")),
-            "Selected-hour demand movement.",
+            t("what_if.selected_metrics.demand_delta.label", locale=locale),
+            format_signed_mw(scenario_row.get("demand_delta_mw"), locale=locale),
+            t("what_if.selected_metrics.demand_delta.detail", locale=locale),
             icon="+/-",
-            status="watch" if float(scenario_row.get("demand_delta_mw") or 0) > 0 else "green",
-            provenance="scenario",
+            status=card_status_display("watch" if float(scenario_row.get("demand_delta_mw") or 0) > 0 else "green", locale=locale),
         )
     with selected_cols[3]:
         metric_card(
-            "Residual unresolved",
-            format_signed_mw(scenario_row.get("unresolved_residual_mw")),
-            "After estimated flexible generation and import/export response.",
+            t("what_if.selected_metrics.residual_unresolved.label", locale=locale),
+            format_signed_mw(scenario_row.get("unresolved_residual_mw"), locale=locale),
+            t("what_if.selected_metrics.residual_unresolved.detail", locale=locale),
             icon="R",
-            status="watch" if float(scenario_row.get("unresolved_residual_mw") or 0) > 0 else "green",
-            provenance="scenario",
+            status=card_status_display("watch" if float(scenario_row.get("unresolved_residual_mw") or 0) > 0 else "green", locale=locale),
         )
 
 viz_note(
-    "Hourly demand delta",
-    "Negative bars reduce demand in that hour; positive bars add demand in that hour.",
-    source="Scenario API",
+    t("what_if.demand_delta.note_title", locale=locale),
+    t("what_if.demand_delta.note_detail", locale=locale),
+    source=t("what_if.sources.scenario_api", locale=locale),
 )
-st.plotly_chart(demand_delta_chart(result), width="stretch", config={"displayModeBar": False})
+st.plotly_chart(demand_delta_chart(result, locale=locale), width="stretch", config={"displayModeBar": False})
 
-section_header("Generation Response", "Estimated flexible generation, imports/exports, and unresolved residual")
+section_header(t("what_if.generation.kicker", locale=locale), t("what_if.generation.title", locale=locale))
 viz_note(
-    "Estimated response ranges",
-    str(result.get("estimated_generation_response_range", {}).get("method", "Scenario response estimate.")),
-    source="Scenario API estimate",
+    t("what_if.generation.note_title", locale=locale),
+    translate_api_text(result.get("estimated_generation_response_range", {}).get("method", "Scenario response estimate."), locale=locale),
+    source=t("what_if.sources.scenario_api_estimate", locale=locale),
 )
-st.plotly_chart(generation_response_chart(result), width="stretch", config={"displayModeBar": False})
-with st.expander("Response range methods", expanded=False):
-    st.write(result.get("estimated_generation_response_range", {}).get("method"))
-    st.write(result.get("estimated_import_export_delta", {}).get("method"))
-    st.write(result.get("estimated_carbon_range", {}).get("method"))
+st.plotly_chart(generation_response_chart(result, locale=locale), width="stretch", config={"displayModeBar": False})
+with st.expander(t("what_if.generation.methods_expander", locale=locale), expanded=False):
+    st.write(translate_api_text(result.get("estimated_generation_response_range", {}).get("method"), locale=locale))
+    st.write(translate_api_text(result.get("estimated_import_export_delta", {}).get("method"), locale=locale))
+    st.write(translate_api_text(result.get("estimated_carbon_range", {}).get("method"), locale=locale))
 
-section_header("Regional Comparison", "Single delta map")
-regional_delta = regional_delta_frame(regional, result)
+section_header(t("what_if.regional.kicker", locale=locale), t("what_if.regional.title", locale=locale))
+regional_delta = regional_delta_frame(regional, result, locale=locale)
 regional_supported = bool((result.get("regional_deltas") or {}).get("supported", True))
 if not regional_supported:
     explanation_card(
-        "No regional demand-delta allocation",
-        str((result.get("regional_deltas") or {}).get("reason", "This scenario changes national supply context only.")),
-        label="Regional comparison",
-        status="partial",
-        provenance="scenario",
+        t("what_if.regional.no_allocation.title", locale=locale),
+        translate_api_text((result.get("regional_deltas") or {}).get("reason", "This scenario changes national supply context only."), locale=locale),
+        label=t("what_if.regional.no_allocation.label", locale=locale),
     )
 st.plotly_chart(
-    regional_delta_choropleth(regional_delta, context["regions_geojson"]),
+    regional_delta_choropleth(regional_delta, context["regions_geojson"], locale=locale),
     width="stretch",
     key="what_if_delta_map",
     config={"displayModeBar": False},
 )
-changed_table = changed_region_table(regional_delta)
+changed_table = changed_region_table(regional_delta, locale=locale)
 if changed_table.empty:
-    st.info("No regions have a demand delta in this scenario API result.")
+    st.info(t("what_if.regional.no_changed_regions", locale=locale))
 else:
     st.dataframe(changed_table, width="stretch", hide_index=True)
 
-with st.expander("Assumptions and limitations", expanded=False):
-    st.markdown("**Model sensitivity, not causal proof.**")
-    st.write("This is an educational scenario estimate, not an operator dispatch forecast.")
-    st.markdown("**Scenario API assumptions**")
+with st.expander(t("what_if.assumptions.expander", locale=locale), expanded=False):
+    st.markdown(f"**{t('what_if.assumptions.sensitivity_heading', locale=locale)}**")
+    st.write(t("what_if.assumptions.sensitivity_body", locale=locale))
+    st.markdown(f"**{t('what_if.assumptions.api_heading', locale=locale)}**")
     for assumption in result.get("assumptions") or []:
-        st.write(assumption)
-    st.markdown("**Limitations**")
+        st.write(translate_api_text(assumption, locale=locale))
+    st.markdown(f"**{t('what_if.assumptions.limitations_heading', locale=locale)}**")
     for caveat in result.get("caveats") or []:
-        st.write(caveat)
-    st.markdown("**Data and model versions**")
-    versions = {
-        "Result ID": result.get("result_id"),
-        "Baseline run": result.get("baseline_forecast_run_id"),
-        "Generated at": result.get("generated_at"),
-        **{f"Model: {key}": value for key, value in (result.get("model_versions") or {}).items()},
-        **{f"Data: {key}": value for key, value in (result.get("data_versions") or {}).items() if key != "baseline_snapshot_ids"},
-    }
-    for label, value in versions.items():
+        st.write(translate_api_text(caveat, locale=locale))
+    st.markdown(f"**{t('what_if.assumptions.versions_heading', locale=locale)}**")
+    versions = [
+        (t("what_if.versions.result_id", locale=locale), result.get("result_id")),
+        (t("what_if.versions.baseline_run", locale=locale), result.get("baseline_forecast_run_id")),
+        (t("what_if.versions.generated_at", locale=locale), result.get("generated_at")),
+    ]
+    versions.extend(
+        (t("what_if.versions.model", locale=locale, name=key), value)
+        for key, value in (result.get("model_versions") or {}).items()
+    )
+    versions.extend(
+        (t("what_if.versions.data", locale=locale, name=key), value)
+        for key, value in (result.get("data_versions") or {}).items()
+        if key != "baseline_snapshot_ids"
+    )
+    for label, value in versions:
         st.write(f"{label}: {value}")
 
-about_project_drawer()
+about_project_drawer(locale=locale)
 provenance_drawer(
-    ("Scenario API result", str(result.get("result_id"))),
-    ("Baseline forecast run", str(result.get("baseline_forecast_run_id"))),
-    ("Scenario preset", html.unescape(selected_label)),
-    ("Regional electricity", context["regional_source"]),
+    (t("what_if.provenance.scenario_api_result", locale=locale), str(result.get("result_id"))),
+    (t("what_if.provenance.baseline_forecast_run", locale=locale), str(result.get("baseline_forecast_run_id"))),
+    (t("what_if.provenance.scenario_preset", locale=locale), html.unescape(selected_label)),
+    (t("what_if.provenance.regional_electricity", locale=locale), context["regional_source"]),
+    locale=locale,
 )

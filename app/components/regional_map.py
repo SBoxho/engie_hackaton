@@ -203,7 +203,16 @@ def regional_anomaly_choropleth(
     *,
     department_metrics_available: bool = False,
     demand_label_title: str = "Observed demand",
+    usual_demand_label_title: str = "Usual demand",
+    difference_label_title: str = "Difference",
+    freshness_label_title: str = "Freshness",
     source_label_title: str = "Source",
+    colorbar_title: str = "Versus usual",
+    anomaly_label_title: str = "Demand anomaly",
+    reason_label_title: str = "Reason",
+    unavailable_label: str = "Unavailable",
+    available_trace_name: str = "Available regional anomaly",
+    unavailable_trace_name: str = "Unavailable regional data",
 ) -> go.Figure:
     """Render regional demand anomaly on a zero-centred diverging scale."""
     if frame.empty:
@@ -252,7 +261,7 @@ def regional_anomaly_choropleth(
                 marker_line_color="rgba(219,234,254,.72)",
                 marker_line_width=0.7,
                 colorbar=dict(
-                    title="Versus usual",
+                    title=colorbar_title,
                     tickmode="array",
                     tickvals=[-max_abs, 0, max_abs],
                     ticktext=[
@@ -277,12 +286,12 @@ def regional_anomaly_choropleth(
                 hovertemplate=(
                     "<b>%{customdata[0]}</b><br>"
                     f"{demand_label_title}: %{{customdata[1]}}<br>"
-                    "Usual demand: %{customdata[2]}<br>"
-                    "Difference: %{customdata[3]}<br>"
-                    "Freshness: %{customdata[4]}<br>"
+                    f"{usual_demand_label_title}: %{{customdata[2]}}<br>"
+                    f"{difference_label_title}: %{{customdata[3]}}<br>"
+                    f"{freshness_label_title}: %{{customdata[4]}}<br>"
                     f"{source_label_title}: %{{customdata[5]}}<extra></extra>"
                 ),
-                name="Available regional anomaly",
+                name=available_trace_name,
             )
         )
     if not unavailable.empty:
@@ -308,12 +317,12 @@ def regional_anomaly_choropleth(
                 ],
                 hovertemplate=(
                     "<b>%{customdata[0]}</b><br>"
-                    "Demand anomaly: Unavailable<br>"
-                    "Reason: %{customdata[1]}<br>"
-                    "Freshness: %{customdata[2]}<br>"
-                    "Source: %{customdata[3]}<extra></extra>"
+                    f"{anomaly_label_title}: {unavailable_label}<br>"
+                    f"{reason_label_title}: %{{customdata[1]}}<br>"
+                    f"{freshness_label_title}: %{{customdata[2]}}<br>"
+                    f"{source_label_title}: %{{customdata[3]}}<extra></extra>"
                 ),
-                name="Unavailable regional data",
+                name=unavailable_trace_name,
             )
         )
     if department_geojson and department_metrics_available:
